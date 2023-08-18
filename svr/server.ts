@@ -1,5 +1,5 @@
 import * as path from "https://deno.land/std@0.188.0/path/mod.ts";
-import {existsSync} from "https://deno.land/std/fs/mod.ts";
+import {existsSync} from "https://deno.land/std@0.198.0/fs/mod.ts";
 
 const __dirname = path.dirname(path.fromFileUrl(import.meta.url));
 const FILES_FOLDER = "/files";
