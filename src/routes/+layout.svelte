@@ -10,8 +10,11 @@
         AppRailTile,
         AppRailAnchor,
         LightSwitch,
+        Toast,
     } from "@skeletonlabs/skeleton";
 </script>
+
+<Toast />
 
 <AppShell>
     <svelte:fragment slot="sidebarLeft">
