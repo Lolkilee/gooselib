@@ -96,6 +96,7 @@ async function serveHttp(conn: Deno.Conn) {
         //url is filepath
         const url = new URL(requestEvent.request.url);
         
+        // Base request returns app.json file
         if (url.pathname == "/") {
             const res = new Response(Deno.readTextFileSync(__dirname + FILES_FOLDER + "/apps.json"), {
                 status: 200,
@@ -104,11 +105,23 @@ async function serveHttp(conn: Deno.Conn) {
                 }
             });
             await requestEvent.respondWith(res);
-        } else if (url.pathname == "/refresh") {
+        }
+        
+        // Refresh the meta data
+        else if (url.pathname == "/refresh") {
             const res = new Response("Refreshing meta data", { status: 202 });
             await requestEvent.respondWith(res);
             updateMetaData();
-        } else {
+        }
+        
+        // TODO: UPLOAD POST REQUEST
+        /*
+        else if (url.pathname == "/upload" && requestEvent.request.method == "POST") {
+
+        } */
+        
+        // Else serve file if exists on that path
+        else {
             const filepath = decodeURIComponent(url.pathname);
 
             // Check if file exists and open it
