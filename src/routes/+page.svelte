@@ -1,11 +1,16 @@
 <script lang="ts">
     // Settings page
 
-    import { toastStore, type ToastSettings } from "@skeletonlabs/skeleton";
+    import {
+        toastStore,
+        type ToastSettings,
+        LightSwitch,
+    } from "@skeletonlabs/skeleton";
+    // @ts-ignore
     import Flex from "svelte-flex";
 
-    let serverAddress: string = "";
-    let serverPassword: string = "";
+    let serverAddress: string | null = "";
+    let serverPassword: string | null = "";
 
     const saveMsg: ToastSettings = {
         message: "Settings saved!",
@@ -20,8 +25,10 @@
         serverPassword = localStorage.getItem("server-password");
 
     function saveSettings() {
-        localStorage.setItem("saved-address", serverAddress);
-        localStorage.setItem("server-password", serverPassword);
+        if (serverAddress != null)
+            localStorage.setItem("saved-address", serverAddress);
+        if (serverPassword != null)
+            localStorage.setItem("server-password", serverPassword);
         toastStore.trigger(saveMsg);
     }
 </script>

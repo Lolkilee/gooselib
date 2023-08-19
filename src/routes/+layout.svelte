@@ -4,14 +4,19 @@
     import "../app.postcss";
     import Icon from "@iconify/svelte";
     import { page } from "$app/stores";
+    import { getClient, ResponseType } from "@tauri-apps/api/http";
     import {
         AppShell,
         AppRail,
-        AppRailTile,
         AppRailAnchor,
-        LightSwitch,
+        toastStore,
+        type ToastSettings,
         Toast,
     } from "@skeletonlabs/skeleton";
+
+    function onRefreshClick() {
+        //TODO
+    }
 </script>
 
 <Toast />
@@ -28,15 +33,21 @@
             </svelte:fragment>
 
             <AppRailAnchor
-                href="/about"
-                selected={$page.url.pathname === "/about"}
+                href="/apps/test"
+                selected={$page.url.pathname === "/apps/test"}
             >
                 (icon)
             </AppRailAnchor>
 
             <svelte:fragment slot="trail">
                 <div class="card p-4">
-                    <LightSwitch />
+                    <button
+                        on:click={onRefreshClick}
+                        type="button"
+                        class="btn-icon variant-filled-primary"
+                    >
+                        <Icon icon="material-symbols:refresh" />
+                    </button>
                 </div>
             </svelte:fragment>
         </AppRail>

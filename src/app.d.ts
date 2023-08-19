@@ -6,7 +6,17 @@ declare global {
 		// interface Locals {}
 		// interface PageData {}
 		// interface Platform {}
-	}
+        
+    }
+    
+    interface AppDefinition {
+        name: string;
+        versions: string[];
+    }
+
+    interface Library {
+        apps: AppDefinition[];
+    }
 }
 
 export {};
