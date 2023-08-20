@@ -4,7 +4,7 @@
     import "../app.postcss";
     import Icon from "@iconify/svelte";
     import { page } from "$app/stores";
-    import { getClient, ResponseType } from "@tauri-apps/api/http";
+    import { ResponseType, getClient } from "@tauri-apps/api/http";
     import {
         AppShell,
         AppRail,
@@ -14,9 +14,50 @@
         Toast,
     } from "@skeletonlabs/skeleton";
 
-    function onRefreshClick() {
-        //TODO
+    export let lib: Library = { apps: [] };
+
+    async function onRefreshClick() {
+        if (localStorage.getItem("saved-address") != null) {
+            try {
+                const updtMsg: ToastSettings = {
+                    message: "Updating library...",
+                    hideDismiss: true,
+                    timeout: 5000,
+                    background: "variant-filled-primary",
+                };
+                const tId = toastStore.trigger(updtMsg);
+                const client = await getClient();
+                const address = localStorage.getItem("saved-address");
+                const response = await client.get<Library>(
+                    "http://" + address + ":" + 8765,
+                    {
+                        timeout: 30,
+                        responseType: ResponseType.JSON,
+                    }
+                );
+                lib = response.data;
+                sessionStorage.setItem("app-data", JSON.stringify(lib));
+                toastStore.close(tId);
+            } catch (err) {
+                const errMsg: ToastSettings = {
+                    message: err,
+                    timeout: 5000,
+                    background: "variant-filled-error",
+                };
+                toastStore.trigger(errMsg);
+            }
+        } else {
+            const errMsg: ToastSettings = {
+                message: "Could not connect to server; invalid address",
+                timeout: 5000,
+                background: "variant-filled-error",
+            };
+            toastStore.trigger(errMsg);
+        }
     }
+
+    // On startup try to load
+    onRefreshClick();
 </script>
 
 <Toast />
@@ -32,12 +73,14 @@
                 </AppRailAnchor>
             </svelte:fragment>
 
-            <AppRailAnchor
-                href="/apps/test"
-                selected={$page.url.pathname === "/apps/test"}
-            >
-                (icon)
-            </AppRailAnchor>
+            {#each lib.apps as app}
+                <AppRailAnchor
+                    href="/apps/{app.name}"
+                    selected={$page.url.pathname === "/apps/test"}
+                >
+                    {app.name}
+                </AppRailAnchor>
+            {/each}
 
             <svelte:fragment slot="trail">
                 <div class="card p-4">

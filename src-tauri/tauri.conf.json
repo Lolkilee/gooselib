@@ -21,7 +21,8 @@
       },      
       "http": {
         "all": true,
-        "request": true
+        "request": true,
+        "scope": ["https://*", "http://*"]
       }
     },
     "bundle": {
