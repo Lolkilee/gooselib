@@ -1,5 +1,4 @@
 import { existsSync } from "https://deno.land/std@0.198.0/fs/mod.ts";
-import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
 
 // Default upload password
 // Becomes a hash string on startup
@@ -132,7 +131,7 @@ async function serveHttp(conn: Deno.Conn) {
                     const pw = requestEvent.request.headers.get("pw");
 
                     if (pw != null) {
-                        if (bcrypt.compareSync(pw, password)) {
+                        if (pw == password) {
                             const appName = requestEvent.request.headers.get("app-name");
                             const verName = requestEvent.request.headers.get("app-version");
 
@@ -195,9 +194,8 @@ async function serveHttp(conn: Deno.Conn) {
 
 if (Deno.args.length != 1) {
     console.log("Starting server with default upload password (`password`) \nTo start the server with a password pass the password as an argument");
-    password = await bcrypt.hash(password);
 } else {
-    password = await bcrypt.hash(Deno.args[0]);
+    password = Deno.args[0];
 }
 
 updateMetaData();
