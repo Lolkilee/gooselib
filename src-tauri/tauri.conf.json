@@ -23,6 +23,12 @@
         "all": true,
         "request": true,
         "scope": ["https://*", "http://*"]
+      },
+      "shell": {
+        "sidecar": true,
+        "scope": [
+            {"name": "../svr/build/gl-downloader", "sidecar": true, "args": true}
+        ]
       }
     },
     "bundle": {
@@ -32,7 +38,9 @@
       "deb": {
         "depends": []
       },
-      "externalBin": [],
+      "externalBin": [
+        "../svr/build/gl-downloader"
+      ],
       "icon": [
         "icons/32x32.png",
         "icons/128x128.png",

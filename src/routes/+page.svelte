@@ -11,7 +11,7 @@
 
     let serverAddress: string | null = "";
     let serverPassword: string | null = "";
-    let installFolder: string | null = "./apps/";
+    let installFolder: string | null = "";
 
     const saveMsg: ToastSettings = {
         message: "Settings saved!",
@@ -24,6 +24,9 @@
 
     if (localStorage.getItem("server-password") != null)
         serverPassword = localStorage.getItem("server-password");
+
+    if (localStorage.getItem("install-folder") != null)
+        installFolder = localStorage.getItem("install-folder");
 
     function saveSettings() {
         if (serverAddress != null)
@@ -67,7 +70,7 @@
         <h5 class="h5 ml-4">Install folder</h5>
         <input
             class="input text-center w-2/3"
-            type="folder"
+            type="text"
             placeholder="server password"
             bind:value={installFolder}
         />
@@ -77,7 +80,7 @@
 <button
     on:click={saveSettings}
     type="button"
-    class="btn variant-filled-primary mt-16"
+    class="btn variant-filled-primary mt-4"
 >
     Save Settings
 </button>

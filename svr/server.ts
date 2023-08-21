@@ -125,7 +125,7 @@ async function serveHttp(conn: Deno.Conn) {
             const filepath = decodeURIComponent(url.pathname);
 
             // Check if file exists and open it
-            let file;
+            let file: Deno.FsFile;
             try {
                 file = await Deno.open(__dirname + FILES_FOLDER + filepath, { read: true });
             } catch {
@@ -134,9 +134,12 @@ async function serveHttp(conn: Deno.Conn) {
                 continue;
             }
 
+            // Calculate length of file
+            const content_length = file.statSync().size.toString();
+
             // Send file back to request
             const readableStream = file.readable;
-            const response = new Response(readableStream);
+            const response = new Response(readableStream, {headers: {"Content-Length": content_length}});
             await requestEvent.respondWith(response);
         }
     }
