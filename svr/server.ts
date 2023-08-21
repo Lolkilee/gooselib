@@ -1,5 +1,9 @@
-import {existsSync} from "https://deno.land/std@0.198.0/fs/mod.ts";
+import { existsSync } from "https://deno.land/std@0.198.0/fs/mod.ts";
+import * as bcrypt from "https://deno.land/x/bcrypt@v0.4.1/mod.ts";
 
+// Default upload password
+// Becomes a hash string on startup
+let password = "password";
 const FILES_FOLDER = "./files";
 
 class AppDefinition {
@@ -78,69 +82,122 @@ async function updateMetaData() {
 }
 
 async function startServer() {
+    if (!existsSync(FILES_FOLDER))
+        await Deno.mkdir(FILES_FOLDER);
+
     const PORT = 8765;
     const server = Deno.listen({ port: PORT });
     console.log("Started http server on port " + PORT);
 
     for await (const conn of server) {
-        serveHttp(conn);
+        try {
+            serveHttp(conn);
+        } catch (err) {
+            console.log(err);
+        }
     }
 }
 
 async function serveHttp(conn: Deno.Conn) {
-    const httpConn = Deno.serveHttp(conn);
-    for await (const requestEvent of httpConn) {
-        
-        //url is filepath
-        const url = new URL(requestEvent.request.url);
-        
-        // Base request returns app.json file
-        if (url.pathname == "/") {
-            const res = new Response(Deno.readTextFileSync(FILES_FOLDER + "/apps.json"), {
-                status: 200,
-                headers: {
-                    "content-type": "application/json; charset=utf-8"
-                }
-            });
-            await requestEvent.respondWith(res);
-        }
-        
-        // Refresh the meta data
-        else if (url.pathname == "/refresh") {
-            const res = new Response("Refreshing meta data", { status: 202 });
-            await requestEvent.respondWith(res);
-            updateMetaData();
-        }
-        
-        // TODO: UPLOAD POST REQUEST
-        /*
-        else if (url.pathname == "/upload" && requestEvent.request.method == "POST") {
-
-        } */
-        
-        // Else serve file if exists on that path
-        else {
-            const filepath = decodeURIComponent(url.pathname);
-
-            // Check if file exists and open it
-            let file: Deno.FsFile;
+    try {
+        const httpConn = Deno.serveHttp(conn);
+        for await (const requestEvent of httpConn) {
             try {
-                file = await Deno.open(FILES_FOLDER + filepath, { read: true });
-            } catch {
-                const notFoundResponse = new Response("404 Not Found", { status: 404 });
-                await requestEvent.respondWith(notFoundResponse);
-                continue;
+                //url is filepath
+                const url = new URL(requestEvent.request.url);
+        
+                // Base request returns app.json file
+                if (url.pathname == "/") {
+                    const res = new Response(Deno.readTextFileSync(FILES_FOLDER + "/apps.json"), {
+                        status: 200,
+                        headers: {
+                            "content-type": "application/json; charset=utf-8"
+                        }
+                    });
+                    await requestEvent.respondWith(res);
+                }
+        
+                // Refresh the meta data
+                else if (url.pathname == "/refresh") {
+                    const res = new Response("Refreshing meta data", { status: 202 });
+                    await requestEvent.respondWith(res);
+                    updateMetaData();
+                }
+        
+                else if (url.pathname == "/upload" && requestEvent.request.method == "POST"
+                    && requestEvent.request.headers.has("app-name") && requestEvent.request.headers.has("app-version")
+                    && requestEvent.request.headers.has("pw")) {
+            
+                    const badReqResp = new Response("400 Bad Request", { status: 400 });
+                    const pw = requestEvent.request.headers.get("pw");
+
+                    if (pw != null) {
+                        if (bcrypt.compareSync(pw, password)) {
+                            const appName = requestEvent.request.headers.get("app-name");
+                            const verName = requestEvent.request.headers.get("app-version");
+
+                            if (appName != null && verName != null) {
+                                
+
+                                if (!existsSync(FILES_FOLDER + "/" + appName))
+                                    await Deno.mkdir(FILES_FOLDER + "/" + appName);
+
+                                if (!existsSync(FILES_FOLDER + "/" + appName + "/" + verName + ".app")) {
+                                    const tF = await (Deno.open(FILES_FOLDER + "/" + appName + "/" + verName + ".app", { write: true, createNew: true }));
+                                    tF.close();
+                                }
+                                
+                                const file = await Deno.open(FILES_FOLDER + "/" + appName + "/" + verName + ".app", { write: true});
+                                await requestEvent.request.body?.pipeTo(file.writable);
+                                await requestEvent.respondWith(new Response("Upload accepted", { status: 200 }));
+                            } else {
+                                await requestEvent.respondWith(badReqResp);
+                            }
+                        } else {
+                            const forbiddenResp = new Response("403 Forbidden", { status: 403 });
+                            await requestEvent.respondWith(forbiddenResp);
+                        }
+                    } else {
+                        await requestEvent.respondWith(badReqResp);
+                    }
+                }
+        
+                // Else serve file if exists on that path
+                else {
+                    const filepath = decodeURIComponent(url.pathname);
+
+                    // Check if file exists and open it
+                    let file: Deno.FsFile;
+                    try {
+                        file = await Deno.open(FILES_FOLDER + filepath, { read: true });
+                    } catch {
+                        const notFoundResponse = new Response("404 Not Found", { status: 404 });
+                        await requestEvent.respondWith(notFoundResponse);
+                        continue;
+                    }
+
+                    // Calculate length of file
+                    const content_length = file.statSync().size.toString();
+
+                    // Send file back to request
+                    const readableStream = file.readable;
+                    const response = new Response(readableStream, { headers: { "Content-Length": content_length } });
+                    await requestEvent.respondWith(response);
+                }
+            } catch (err) {
+                requestEvent.respondWith(new Response("500 Internal Server Error; \n" + err, { status: 500 }));
             }
-
-            // Calculate length of file
-            const content_length = file.statSync().size.toString();
-
-            // Send file back to request
-            const readableStream = file.readable;
-            const response = new Response(readableStream, {headers: {"Content-Length": content_length}});
-            await requestEvent.respondWith(response);
         }
+    } catch (err) {
+        console.log(err);
     }
+}
+
+if (Deno.args.length != 1) {
+    console.log("Starting server with default upload password (`password`) \nTo start the server with a password pass the password as an argument");
+    password = await bcrypt.hash(password);
+} else {
+    password = await bcrypt.hash(Deno.args[0]);
 }
 
 updateMetaData();
