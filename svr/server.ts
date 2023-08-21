@@ -85,7 +85,11 @@ async function startServer() {
     console.log("Started http server on port " + PORT);
 
     for await (const conn of server) {
-        serveHttp(conn);
+        try {
+            serveHttp(conn);
+        } catch (err) {
+            console.log(err);
+        }
     }
 }
 
