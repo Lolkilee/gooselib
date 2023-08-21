@@ -34,7 +34,7 @@ jobs:
       - name: install frontend dependencies
         run: npm install --legacy-peer-deps # change this to npm or pnpm depending on which one you use
       - name: compile deno scripts
-        run: ./compile.sh
+        run: ./build.sh
         shell: bash
       - uses: tauri-apps/tauri-action@v0
         env:
