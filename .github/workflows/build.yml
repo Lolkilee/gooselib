@@ -1,4 +1,4 @@
-name: 'build'
+name: "build"
 on:
   push:
     branches:
@@ -34,14 +34,14 @@ jobs:
       - name: install frontend dependencies
         run: npm install --legacy-peer-deps # change this to npm or pnpm depending on which one you use
       - name: compile deno scripts
-        run: ./svr/compile.sh
+        run: ./compile.sh
         shell: bash
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: app-v__VERSION__ # the action automatically replaces \_\_VERSION\_\_ with the app version
-          releaseName: 'App v__VERSION__'
-          releaseBody: 'See the assets to download this version and install.'
+          releaseName: "App v__VERSION__"
+          releaseBody: "See the assets to download this version and install."
           releaseDraft: true
           prerelease: false
