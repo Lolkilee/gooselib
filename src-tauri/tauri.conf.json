@@ -48,7 +48,7 @@
         "icons/icon.icns",
         "icons/icon.ico"
       ],
-      "identifier": "com.tauri.dev",
+      "identifier": "com.lolkilee.gooselib",
       "longDescription": "",
       "macOS": {
         "entitlements": null,
@@ -77,7 +77,7 @@
         "fullscreen": false,
         "height": 600,
         "resizable": true,
-        "title": "gooselib",
+        "title": "GooseLib",
         "width": 800
       }
     ]
