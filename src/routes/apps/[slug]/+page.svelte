@@ -17,6 +17,17 @@
         progress: number;
     }
 
+    function updateProgress() {
+        const jString = sessionStorage.getItem(
+            app.name + "-" + selectedVersion + "-progress"
+        );
+        if (jString != null) {
+            const update: ProgressUpdate = JSON.parse(jString);
+            downloadProgress = update.progress;
+            status = update.status;
+        }
+    }
+
     function loadPageData() {
         const appName = $page.params.slug;
         const jString = sessionStorage.getItem("app-data");
@@ -67,14 +78,24 @@
 
             // On progress update
             command.stdout.on("data", (line) => {
-                const update: ProgressUpdate = JSON.parse(line);
-                downloadProgress = update.progress;
-                status = update.status;
+                sessionStorage.setItem(
+                    app.name + "-" + selectedVersion + "-progress",
+                    line
+                );
+                console.log(line);
             });
 
             await command.execute();
         }
     }
+
+    const progressUpdate = setInterval(function () {
+        updateProgress();
+    }, 25);
+
+    onDestroy(() => {
+        clearInterval(progressUpdate);
+    });
 
     loadPageData();
 </script>
@@ -103,7 +124,7 @@
         </button>
         <div class="w-1/4">
             <ProgressRadial value={downloadProgress} width="w-24"
-                >{downloadProgress}%</ProgressRadial
+                >{downloadProgress.toFixed(2)}%</ProgressRadial
             >
         </div>
     </Flex>
