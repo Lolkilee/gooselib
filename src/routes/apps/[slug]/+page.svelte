@@ -3,7 +3,6 @@
     // @ts-ignore
     import Flex from "svelte-flex";
     import { ProgressRadial } from "@skeletonlabs/skeleton";
-    import { invoke } from "@tauri-apps/api/tauri";
     import { onDestroy } from "svelte";
     import { Command } from "@tauri-apps/api/shell";
 
