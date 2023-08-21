@@ -14,7 +14,7 @@ module.exports = {
 		extend: {},
 	},
 	plugins: [
-		// 3. Append the Skeleton plugin to the end of this list
+        require('@tailwindcss/forms'),
 		...require('@skeletonlabs/skeleton/tailwind/skeleton.cjs')()
 	]
 }

@@ -15,6 +15,7 @@
     "@sveltejs/adapter-auto": "^2.0.0",
     "@sveltejs/adapter-static": "^2.0.3",
     "@sveltejs/kit": "^1.20.4",
+    "@tailwindcss/forms": "^0.5.4",
     "autoprefixer": "^10.4.14",
     "postcss": "^8.4.24",
     "postcss-load-config": "^4.0.1",
@@ -28,6 +29,7 @@
   "type": "module",
   "dependencies": {
     "@tauri-apps/api": "^1.4.0",
+    "@tauri-apps/plugin-upload": "^2.0.0-alpha.1",
     "svelte-flex": "^1.3.0"
   }
 }

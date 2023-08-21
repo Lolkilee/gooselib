@@ -11,6 +11,7 @@
 
     let serverAddress: string | null = "";
     let serverPassword: string | null = "";
+    let installFolder: string | null = "./apps/";
 
     const saveMsg: ToastSettings = {
         message: "Settings saved!",
@@ -29,6 +30,8 @@
             localStorage.setItem("saved-address", serverAddress);
         if (serverPassword != null)
             localStorage.setItem("server-password", serverPassword);
+        if (installFolder != null)
+            localStorage.setItem("install-folder", installFolder);
         toastStore.trigger(saveMsg);
     }
 </script>
@@ -39,7 +42,7 @@
     <Flex justify="between">
         <h5 class="h5 ml-4">Server address</h5>
         <input
-            class="input text-center w-3/4"
+            class="input text-center w-2/3"
             type="text"
             placeholder="server address"
             bind:value={serverAddress}
@@ -51,10 +54,22 @@
     <Flex justify="between">
         <h5 class="h5 ml-4">Password</h5>
         <input
-            class="input text-center w-3/4"
+            class="input text-center w-2/3"
             type="password"
             placeholder="server password"
             bind:value={serverPassword}
+        />
+    </Flex>
+</div>
+
+<div class="my-2">
+    <Flex justify="between">
+        <h5 class="h5 ml-4">Install folder</h5>
+        <input
+            class="input text-center w-2/3"
+            type="folder"
+            placeholder="server password"
+            bind:value={installFolder}
         />
     </Flex>
 </div>
