@@ -1,8 +1,6 @@
-import * as path from "https://deno.land/std@0.188.0/path/mod.ts";
 import {existsSync} from "https://deno.land/std@0.198.0/fs/mod.ts";
 
-const __dirname = path.dirname(path.fromFileUrl(import.meta.url));
-const FILES_FOLDER = "/files";
+const FILES_FOLDER = "./files";
 
 class AppDefinition {
     name: string;
@@ -41,12 +39,12 @@ class Library {
         let appCount = 0;
         let vCount = 0;
         
-        for await (const dirEntry of Deno.readDir(__dirname + FILES_FOLDER + "/")) {
+        for await (const dirEntry of Deno.readDir(FILES_FOLDER + "/")) {
             if (dirEntry.isDirectory) {
                 const versions: string[] = []
                 appCount++;
                 
-                for await (const vEntry of Deno.readDir(__dirname + FILES_FOLDER + "/" + dirEntry.name)) {
+                for await (const vEntry of Deno.readDir(FILES_FOLDER + "/" + dirEntry.name)) {
                     if (vEntry.name.includes(".app") && vEntry.isFile) {
                         versions.push(vEntry.name.replace(".app", ""));
                         vCount++;
@@ -64,8 +62,8 @@ class Library {
 
 async function updateMetaData() {
     // Create the file to write to
-    if (!existsSync(__dirname + FILES_FOLDER + "/apps.json")) {
-        const metaFile = await Deno.open(__dirname + FILES_FOLDER + "/apps.json", { createNew: true, write: true });
+    if (!existsSync(FILES_FOLDER + "/apps.json")) {
+        const metaFile = await Deno.open(FILES_FOLDER + "/apps.json", { createNew: true, write: true });
         metaFile.close();
     }
     
@@ -76,7 +74,7 @@ async function updateMetaData() {
 
     // Write the json data to the meta file
     const data = JSON.stringify(lib);
-    await Deno.writeTextFile(__dirname + FILES_FOLDER + "/apps.json", data);
+    await Deno.writeTextFile(FILES_FOLDER + "/apps.json", data);
 }
 
 async function startServer() {
@@ -98,7 +96,7 @@ async function serveHttp(conn: Deno.Conn) {
         
         // Base request returns app.json file
         if (url.pathname == "/") {
-            const res = new Response(Deno.readTextFileSync(__dirname + FILES_FOLDER + "/apps.json"), {
+            const res = new Response(Deno.readTextFileSync(FILES_FOLDER + "/apps.json"), {
                 status: 200,
                 headers: {
                     "content-type": "application/json; charset=utf-8"
@@ -127,7 +125,7 @@ async function serveHttp(conn: Deno.Conn) {
             // Check if file exists and open it
             let file: Deno.FsFile;
             try {
-                file = await Deno.open(__dirname + FILES_FOLDER + filepath, { read: true });
+                file = await Deno.open(FILES_FOLDER + filepath, { read: true });
             } catch {
                 const notFoundResponse = new Response("404 Not Found", { status: 404 });
                 await requestEvent.respondWith(notFoundResponse);
