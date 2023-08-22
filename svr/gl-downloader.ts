@@ -4,7 +4,7 @@
 // Progress is sent through stdout json
 
 import { tar } from "https://deno.land/x/compress@v0.4.4/mod.ts";
-import { lock } from "https://cdn.jsdelivr.net/gh/hexagon/lock@0.9.9/mod.ts";
+import { existsSync } from "https://deno.land/std@0.198.0/fs/mod.ts";
 
 let status = "idle";
 let progress = 0;
@@ -14,15 +14,17 @@ function logProgess() {
 }
 
 async function installApp(url: string, path: string, password: string) {
-    const interval = setInterval(() => { logProgess(); }, 1);
+    const interval = setInterval(() => { logProgess(); }, 100);
 
     const tmpFile = "./tmp.tar";
     progress = 0;
     try {
         // Download file from server
         status = "downloading";
-        const res = await fetch(url);
-        const file = await Deno.open(tmpFile + ".lock", { create: true, write: true });
+        const headers = new Headers();
+        headers.append("pw", password);
+        const res = await fetch(new Request(url, {headers:headers}));
+        const file = await Deno.open(tmpFile, { create: true, write: true });
 
         let lHeader = res.headers.get("Content-Length");
         if (lHeader == null)
@@ -34,15 +36,13 @@ async function installApp(url: string, path: string, password: string) {
             for await (const chunk of res.body) {
                 await file.write(chunk);
                 bytesWritten += chunk.length;
-                progress = (bytesWritten / contentLength) * 79;
+                progress = (bytesWritten / contentLength) * 94;
             }
         }
         file.close();
 
-        // Decrypt file
-        status = "decrypting";
-        progress = 85;
-        await lock(tmpFile + ".lock", true, true, true, false, password);
+        if (existsSync(path))
+            await Deno.remove(path, { recursive: true });
         
         // Uncompress tar to folder
         status = "installing";
@@ -70,5 +70,5 @@ if (Deno.args.length == 3) {
    
     installApp(url, path, password);
 } else {
-    console.log("Invalid arguments!");
+    console.log("Invalid arguments!, expected 3, got " + Deno.args.length);
 }

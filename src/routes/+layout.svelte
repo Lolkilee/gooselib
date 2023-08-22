@@ -28,17 +28,31 @@
                 const tId = toastStore.trigger(updtMsg);
                 const client = await getClient();
                 const address = localStorage.getItem("saved-address");
+                const reqHeaders: Record<string, any> = {
+                    pw: localStorage.getItem("server-password"),
+                };
                 const response = await client.get<Library>(
                     "http://" + address + ":" + 8765,
                     {
                         timeout: 30,
                         responseType: ResponseType.JSON,
+                        headers: reqHeaders,
                     }
                 );
-                lib = response.data;
-                sessionStorage.setItem("app-data", JSON.stringify(lib));
+
+                if (response.status == 403) {
+                    const errMsg: ToastSettings = {
+                        message: "Invalid server password!",
+                        timeout: 5000,
+                        background: "variant-filled-error",
+                    };
+                    toastStore.trigger(errMsg);
+                } else {
+                    lib = response.data;
+                    sessionStorage.setItem("app-data", JSON.stringify(lib));
+                }
                 toastStore.close(tId);
-            } catch (err) {
+            } catch (err: any) {
                 const errMsg: ToastSettings = {
                     message: err,
                     timeout: 5000,
@@ -76,7 +90,7 @@
             {#each lib.apps as app}
                 <AppRailAnchor
                     href="/apps/{app.name}"
-                    selected={$page.url.pathname === "/apps/test"}
+                    selected={$page.url.pathname === "/apps/" + app.name}
                 >
                     {app.name}
                 </AppRailAnchor>

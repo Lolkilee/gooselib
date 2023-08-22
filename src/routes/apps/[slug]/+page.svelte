@@ -1,15 +1,15 @@
 <script lang="ts">
-    import { page } from "$app/stores";
     // @ts-ignore
     import Flex from "svelte-flex";
     import { ProgressRadial } from "@skeletonlabs/skeleton";
     import { onDestroy } from "svelte";
     import { Command } from "@tauri-apps/api/shell";
+    import type { PageData } from "./$types";
 
-    let app: AppDefinition;
+    export let data: PageData;
+
     let downloadProgress: number = 0;
     let status: string = "idle";
-    let selectedVersion = "";
 
     interface ProgressUpdate {
         status: string;
@@ -17,30 +17,17 @@
     }
 
     function updateProgress() {
+        console.log(data.app.name + "-" + data.selectedVersion + "-progress");
         const jString = sessionStorage.getItem(
-            app.name + "-" + selectedVersion + "-progress"
+            data.app.name + "-" + data.selectedVersion + "-progress"
         );
         if (jString != null) {
             const update: ProgressUpdate = JSON.parse(jString);
             downloadProgress = update.progress;
             status = update.status;
-        }
-    }
-
-    function loadPageData() {
-        const appName = $page.params.slug;
-        const jString = sessionStorage.getItem("app-data");
-        if (jString != null) {
-            const lib: Library = JSON.parse(jString);
-            app = lib.apps[0];
-
-            for (let i = 0; i < lib.apps.length; i++) {
-                const tmp = lib.apps[0];
-                if (tmp.name == appName) {
-                    app = tmp;
-                    selectedVersion = app.versions[0];
-                }
-            }
+        } else {
+            downloadProgress = 0;
+            status = "idle";
         }
     }
 
@@ -54,13 +41,12 @@
                 "http://" +
                 address +
                 ":8765/" +
-                app.name +
+                data.app.name +
                 "/" +
-                selectedVersion +
+                data.selectedVersion +
                 ".app";
             console.log(url);
 
-            //invoke("download_app", { url: url, path: path });
             const command = Command.sidecar("../svr/build/gl-downloader", [
                 url,
                 installFolder,
@@ -77,8 +63,9 @@
 
             // On progress update
             command.stdout.on("data", (line) => {
+                console.log(line);
                 sessionStorage.setItem(
-                    app.name + "-" + selectedVersion + "-progress",
+                    data.app.name + "-" + data.selectedVersion + "-progress",
                     line
                 );
                 console.log(line);
@@ -90,22 +77,20 @@
 
     const progressUpdate = setInterval(function () {
         updateProgress();
-    }, 25);
+    }, 100);
 
     onDestroy(() => {
         clearInterval(progressUpdate);
     });
-
-    loadPageData();
 </script>
 
-<h1 class="h1 mb-12">{app.name}</h1>
+<h1 class="h1 mb-12">{data.app.name}</h1>
 
 <div class="my-2 pb-16">
     <Flex justify="between">
         <h5 class="h5">App version</h5>
-        <select class="select w-2/3" bind:value={selectedVersion}>
-            {#each app.versions as version}
+        <select class="select w-2/3" bind:value={data.selectedVersion}>
+            {#each data.app.versions as version}
                 <option value={version}>{version}</option>
             {/each}
         </select>

@@ -9,9 +9,14 @@ declare global {
         
     }
     
-    interface AppDefinition {
+    class AppDefinition {
         name: string;
         versions: string[];
+
+        constructor(name: string, versions: string[]) {
+            this.name = name;
+            this.versions = versions;
+        }
     }
 
     interface Library {
