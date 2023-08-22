@@ -33,7 +33,7 @@ async function installApp(url: string, path: string) {
             for await (const chunk of res.body) {
                 await file.write(chunk);
                 bytesWritten += chunk.length;
-                progress = (bytesWritten / contentLength) * 79;
+                progress = (bytesWritten / contentLength) * 94;
             }
         }
         file.close();
