@@ -4,7 +4,6 @@
 // Progress is sent through stdout json
 
 import { tar } from "https://deno.land/x/compress@v0.4.4/mod.ts";
-import { lock } from "https://cdn.jsdelivr.net/gh/hexagon/lock@0.9.9/mod.ts";
 
 let status = "idle";
 let progress = 0;
@@ -13,7 +12,7 @@ function logProgess() {
     console.log(JSON.stringify({ status: status, progress: progress }));
 }
 
-async function installApp(url: string, path: string, password: string) {
+async function installApp(url: string, path: string) {
     const interval = setInterval(() => { logProgess(); }, 1);
 
     const tmpFile = "./tmp.tar";
@@ -38,11 +37,6 @@ async function installApp(url: string, path: string, password: string) {
             }
         }
         file.close();
-
-        // Decrypt file
-        status = "decrypting";
-        progress = 85;
-        await lock(tmpFile + ".lock", true, true, true, false, password);
         
         // Uncompress tar to folder
         status = "installing";
@@ -63,12 +57,11 @@ async function installApp(url: string, path: string, password: string) {
 
 console.log(Deno.args);
 
-if (Deno.args.length == 3) {
+if (Deno.args.length == 2) {
     const url = Deno.args[0];
     const path = Deno.args[1];
-    const password = Deno.args[2];
    
-    installApp(url, path, password);
+    installApp(url, path);
 } else {
     console.log("Invalid arguments!");
 }
