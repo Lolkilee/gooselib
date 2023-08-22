@@ -38,7 +38,7 @@
                 lib = response.data;
                 sessionStorage.setItem("app-data", JSON.stringify(lib));
                 toastStore.close(tId);
-            } catch (err) {
+            } catch (err: any) {
                 const errMsg: ToastSettings = {
                     message: err,
                     timeout: 5000,
@@ -76,7 +76,7 @@
             {#each lib.apps as app}
                 <AppRailAnchor
                     href="/apps/{app.name}"
-                    selected={$page.url.pathname === "/apps/test"}
+                    selected={$page.url.pathname === "/apps/" + app.name}
                 >
                     {app.name}
                 </AppRailAnchor>

@@ -1,9 +1,10 @@
 // Downloader script that is embedded in the tauri client
 // Handles downloading, encryption and unpacking
-// Args: [url] [path (folder)] [password]
+// Args: [url] [path (folder)]
 // Progress is sent through stdout json
 
 import { tar } from "https://deno.land/x/compress@v0.4.4/mod.ts";
+import { existsSync } from "https://deno.land/std@0.198.0/fs/mod.ts";
 
 let status = "idle";
 let progress = 0;
@@ -13,7 +14,7 @@ function logProgess() {
 }
 
 async function installApp(url: string, path: string) {
-    const interval = setInterval(() => { logProgess(); }, 1);
+    const interval = setInterval(() => { logProgess(); }, 100);
 
     const tmpFile = "./tmp.tar";
     progress = 0;
@@ -21,7 +22,7 @@ async function installApp(url: string, path: string) {
         // Download file from server
         status = "downloading";
         const res = await fetch(url);
-        const file = await Deno.open(tmpFile + ".lock", { create: true, write: true });
+        const file = await Deno.open(tmpFile, { create: true, write: true });
 
         let lHeader = res.headers.get("Content-Length");
         if (lHeader == null)
@@ -37,6 +38,9 @@ async function installApp(url: string, path: string) {
             }
         }
         file.close();
+
+        if (existsSync(path))
+            await Deno.remove(path, { recursive: true });
         
         // Uncompress tar to folder
         status = "installing";
