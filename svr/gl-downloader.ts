@@ -1,6 +1,6 @@
 // Downloader script that is embedded in the tauri client
 // Handles downloading, encryption and unpacking
-// Args: [url] [path (folder)]
+// Args: [url] [path (folder)] [password]
 // Progress is sent through stdout json
 
 import { tar } from "https://deno.land/x/compress@v0.4.4/mod.ts";
@@ -13,7 +13,7 @@ function logProgess() {
     console.log(JSON.stringify({ status: status, progress: progress }));
 }
 
-async function installApp(url: string, path: string) {
+async function installApp(url: string, path: string, password: string) {
     const interval = setInterval(() => { logProgess(); }, 100);
 
     const tmpFile = "./tmp.tar";
@@ -21,7 +21,9 @@ async function installApp(url: string, path: string) {
     try {
         // Download file from server
         status = "downloading";
-        const res = await fetch(url);
+        const headers = new Headers();
+        headers.append("pw", password);
+        const res = await fetch(new Request(url, {headers:headers}));
         const file = await Deno.open(tmpFile, { create: true, write: true });
 
         let lHeader = res.headers.get("Content-Length");
@@ -61,11 +63,12 @@ async function installApp(url: string, path: string) {
 
 console.log(Deno.args);
 
-if (Deno.args.length == 2) {
+if (Deno.args.length == 3) {
     const url = Deno.args[0];
     const path = Deno.args[1];
+    const password = Deno.args[2];
    
-    installApp(url, path);
+    installApp(url, path, password);
 } else {
-    console.log("Invalid arguments!");
+    console.log("Invalid arguments!, expected 3, got " + Deno.args.length);
 }

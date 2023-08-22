@@ -1,8 +1,9 @@
 import { existsSync } from "https://deno.land/std@0.198.0/fs/mod.ts";
 
-// Default upload password
+// Default upload & download password
 // Becomes a hash string on startup
 let password = "password";
+let uploadPassword = password;
 const FILES_FOLDER = "./files";
 
 class AppDefinition {
@@ -105,82 +106,88 @@ async function serveHttp(conn: Deno.Conn) {
                 //url is filepath
                 const url = new URL(requestEvent.request.url);
         
-                // Base request returns app.json file
-                if (url.pathname == "/") {
-                    const res = new Response(Deno.readTextFileSync(FILES_FOLDER + "/apps.json"), {
-                        status: 200,
-                        headers: {
-                            "content-type": "application/json; charset=utf-8"
-                        }
-                    });
-                    await requestEvent.respondWith(res);
-                }
+                if (requestEvent.request.headers.get("pw")! == password || requestEvent.request.headers.get("pw")! == uploadPassword) {
+                    // Base request returns app.json file
+                    if (url.pathname == "/") {
+                        const res = new Response(Deno.readTextFileSync(FILES_FOLDER + "/apps.json"), {
+                            status: 200,
+                            headers: {
+                                "content-type": "application/json; charset=utf-8"
+                            }
+                        });
+                        await requestEvent.respondWith(res);
+                    }
         
-                // Refresh the meta data
-                else if (url.pathname == "/refresh") {
-                    const res = new Response("Refreshing meta data", { status: 202 });
-                    await requestEvent.respondWith(res);
-                    updateMetaData();
-                }
+                    // Refresh the meta data
+                    else if (url.pathname == "/refresh") {
+                        const res = new Response("Refreshing meta data", { status: 202 });
+                        await requestEvent.respondWith(res);
+                        updateMetaData();
+                    }
         
-                else if (url.pathname == "/upload" && requestEvent.request.method == "POST"
-                    && requestEvent.request.headers.has("app-name") && requestEvent.request.headers.has("app-version")
-                    && requestEvent.request.headers.has("pw")) {
+                    // Upload file
+                    else if (url.pathname == "/upload" && requestEvent.request.method == "POST"
+                        && requestEvent.request.headers.has("app-name") && requestEvent.request.headers.has("app-version")
+                        && requestEvent.request.headers.has("pw")) {
             
-                    const badReqResp = new Response("400 Bad Request", { status: 400 });
-                    const pw = requestEvent.request.headers.get("pw");
+                        const badReqResp = new Response("400 Bad Request", { status: 400 });
+                        const pw = requestEvent.request.headers.get("pw");
 
-                    if (pw != null) {
-                        if (pw == password) {
-                            const appName = requestEvent.request.headers.get("app-name");
-                            const verName = requestEvent.request.headers.get("app-version");
+                        if (pw != null) {
+                            if (pw == uploadPassword) {
+                                const appName = requestEvent.request.headers.get("app-name");
+                                const verName = requestEvent.request.headers.get("app-version");
 
-                            if (appName != null && verName != null) {
+                                if (appName != null && verName != null) {
                                 
 
-                                if (!existsSync(FILES_FOLDER + "/" + appName))
-                                    await Deno.mkdir(FILES_FOLDER + "/" + appName);
+                                    if (!existsSync(FILES_FOLDER + "/" + appName))
+                                        await Deno.mkdir(FILES_FOLDER + "/" + appName);
 
-                                if (!existsSync(FILES_FOLDER + "/" + appName + "/" + verName + ".app")) {
-                                    const tF = await (Deno.open(FILES_FOLDER + "/" + appName + "/" + verName + ".app", { write: true, createNew: true }));
-                                    tF.close();
+                                    if (!existsSync(FILES_FOLDER + "/" + appName + "/" + verName + ".app")) {
+                                        const tF = await (Deno.open(FILES_FOLDER + "/" + appName + "/" + verName + ".app", { write: true, createNew: true }));
+                                        tF.close();
+                                    }
+                                
+                                    const file = await Deno.open(FILES_FOLDER + "/" + appName + "/" + verName + ".app", { write: true });
+                                    await requestEvent.request.body?.pipeTo(file.writable);
+                                    await requestEvent.respondWith(new Response("Upload accepted", { status: 200 }));
+                                } else {
+                                    await requestEvent.respondWith(badReqResp);
                                 }
-                                
-                                const file = await Deno.open(FILES_FOLDER + "/" + appName + "/" + verName + ".app", { write: true});
-                                await requestEvent.request.body?.pipeTo(file.writable);
-                                await requestEvent.respondWith(new Response("Upload accepted", { status: 200 }));
                             } else {
-                                await requestEvent.respondWith(badReqResp);
+                                const forbiddenResp = new Response("403 Forbidden", { status: 403 });
+                                await requestEvent.respondWith(forbiddenResp);
                             }
                         } else {
-                            const forbiddenResp = new Response("403 Forbidden", { status: 403 });
-                            await requestEvent.respondWith(forbiddenResp);
+                            await requestEvent.respondWith(badReqResp);
                         }
-                    } else {
-                        await requestEvent.respondWith(badReqResp);
                     }
-                }
         
-                // Else serve file if exists on that path
-                else {
-                    const filepath = decodeURIComponent(url.pathname);
+                    // Else serve file if exists on that path
+                    else {
+                        const filepath = decodeURIComponent(url.pathname);
 
-                    // Check if file exists and open it
-                    let file: Deno.FsFile;
-                    try {
-                        file = await Deno.open(FILES_FOLDER + filepath, { read: true });
-                    } catch {
-                        const notFoundResponse = new Response("404 Not Found", { status: 404 });
-                        await requestEvent.respondWith(notFoundResponse);
-                        continue;
+                        // Check if file exists and open it
+                        let file: Deno.FsFile;
+                        try {
+                            file = await Deno.open(FILES_FOLDER + filepath, { read: true });
+                        } catch {
+                            const notFoundResponse = new Response("404 Not Found", { status: 404 });
+                            await requestEvent.respondWith(notFoundResponse);
+                            continue;
+                        }
+
+                        // Calculate length of file
+                        const content_length = file.statSync().size.toString();
+
+                        // Send file back to request
+                        const readableStream = file.readable;
+                        const response = new Response(readableStream, { headers: { "Content-Length": content_length } });
+                        await requestEvent.respondWith(response);
                     }
-
-                    // Calculate length of file
-                    const content_length = file.statSync().size.toString();
-
-                    // Send file back to request
-                    const readableStream = file.readable;
-                    const response = new Response(readableStream, { headers: { "Content-Length": content_length } });
+                } else {
+                    const response = new Response("403 Forbidden", { status: 403 });
                     await requestEvent.respondWith(response);
                 }
             } catch (err) {
@@ -192,10 +199,11 @@ async function serveHttp(conn: Deno.Conn) {
     }
 }
 
-if (Deno.args.length != 1) {
-    console.log("Starting server with default upload password (`password`) \nTo start the server with a password pass the password as an argument");
+if (Deno.args.length != 2) {
+    console.log("Starting server with default passwords (`password`) \nTo start the server with a password pass the download password as the first argument and the upload password as the second");
 } else {
     password = Deno.args[0];
+    uploadPassword = Deno.args[1];
 }
 
 updateMetaData();

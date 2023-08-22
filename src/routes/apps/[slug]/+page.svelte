@@ -47,10 +47,10 @@
                 ".app";
             console.log(url);
 
-            //invoke("download_app", { url: url, path: path });
             const command = Command.sidecar("../svr/build/gl-downloader", [
                 url,
                 installFolder,
+                password,
             ]);
 
             // Print error to debug console
