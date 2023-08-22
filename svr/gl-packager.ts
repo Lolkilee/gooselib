@@ -3,19 +3,44 @@
 
 import { tar } from "https://deno.land/x/compress@v0.4.4/mod.ts";
 import { lock } from "https://cdn.jsdelivr.net/gh/hexagon/lock@0.9.9/mod.ts";
+import { existsSync } from "https://deno.land/std@0.198.0/fs/mod.ts";
 
 const tmpFile = "./tmp";
+const pFile = "./enc-part";
+const encFile = "./enc";
 
 export async function pack(pass: string, input: string, appName: string, version: string, url: string, passServer: string) {
     try {
         // Compress
         await tar.compress(input, tmpFile);
         
+        // Check if encFile does not exists and if it does delete
+        if (existsSync(encFile))
+            await Deno.remove(encFile);
+
         // Encrypt
-        await lock(tmpFile, false, false, true, false, pass);
+        const cmpFile = await Deno.open(tmpFile, { read: true });
+        const eFile = await Deno.open(encFile, {write: true, createNew: true})
+
+        for await (const chunk of cmpFile.readable) {  
+            // Write to part file
+            const partFile = await Deno.open(pFile, { write: true, createNew: true });
+            await partFile.write(chunk);
+            partFile.close();
+
+            await lock(pFile, false, true, true, false, pass);
+            const partFileRead = await Deno.open(pFile + ".lock", { read: true });
+            for await (const pChunk of partFileRead.readable) {
+                await eFile.write(pChunk);
+            }
+            //partFileRead.close();
+            Deno.remove(pFile + ".lock");
+        }
+        eFile.close();
 
         // Rename file so tmpFile can be reused
-        await Deno.rename(tmpFile + ".lock", tmpFile);
+        await Deno.remove(tmpFile);
+        await Deno.rename(encFile, tmpFile);
 
         // Send post request to server
         const file = await Deno.open(tmpFile, { read: true });
@@ -30,7 +55,8 @@ export async function pack(pass: string, input: string, appName: string, version
             body
         });
         console.log(await resp.text());
-        //file.close();
+        await Deno.remove(tmpFile);
+        await fetch(url + "/refresh");
     } catch (err) {
         console.log(err);
     }
