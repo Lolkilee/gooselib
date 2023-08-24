@@ -18,11 +18,16 @@
     let downloadSpeed: string = "";
     let status: string = "idle";
     let inst = false;
-    let isntFolder = "";
+    let instFolder = "";
     let instSize = "0 Bytes";
+    let isDownloading = false;
+
     $: installed = inst;
-    $: installFolder = isntFolder;
+    $: installFolder = instFolder;
     $: instSize = instSize;
+    $: downloading = isDownloading;
+
+    let downloadCommand: Command;
 
     interface ProgressUpdate {
         status: string;
@@ -68,7 +73,7 @@
                 ".app";
             console.log(url);
 
-            const command = Command.sidecar("../svr/build/gl-downloader", [
+            downloadCommand = Command.sidecar("../svr/build/gl-downloader", [
                 url,
                 installFolder +
                     "/" +
@@ -78,23 +83,26 @@
                 password,
             ]);
 
+            isDownloading = true;
+
             // Print error to debug console
-            command.on("error", (error) =>
+            downloadCommand.on("error", (error) =>
                 console.error(`command error: "${error}"`)
             );
-            command.stderr.on("data", (line) =>
+            downloadCommand.stderr.on("data", (line) =>
                 console.log(`command stderr: "${line}"`)
             );
 
             // On progress update
-            command.stdout.on("data", (line) => {
+            downloadCommand.stdout.on("data", (line) => {
                 sessionStorage.setItem(
                     data.app.name + "-" + data.selectedVersion + "-progress",
                     line
                 );
             });
 
-            await command.execute();
+            await downloadCommand.execute();
+            downloadCommand.removeAllListeners();
         }
     }
 
@@ -137,27 +145,29 @@
         return inp.replaceAll("_", " ");
     }
 
+    async function checkDirSize() {
+        if (inst) {
+            await invoke("get_dir_size", {
+                dir: instFolder,
+            }).then((val) => {
+                instSize = formatBytes(val);
+            });
+        }
+    }
+
     async function checkIfInstalled() {
         if (localStorage.getItem("install-folder") != null) {
-            isntFolder =
+            instFolder =
                 localStorage.getItem("install-folder") +
                 "/" +
                 data.app.name +
                 "-" +
                 data.selectedVersion;
             await invoke("check_dir_exists", {
-                dir: isntFolder,
+                dir: instFolder,
             }).then((val) => {
                 inst = !!val;
             });
-
-            if (inst) {
-                await invoke("get_dir_size", {
-                    dir: isntFolder,
-                }).then((val) => {
-                    instSize = formatBytes(val);
-                });
-            }
         } else inst = false;
     }
 
@@ -190,8 +200,13 @@
         await checkIfInstalled();
     }, 100);
 
+    const dirSizeUpdate = setInterval(async function () {
+        await checkDirSize();
+    }, 1000);
+
     onDestroy(() => {
         clearInterval(progressUpdate);
+        clearInterval(dirSizeUpdate);
     });
 </script>
 
@@ -231,6 +246,13 @@
                 class="relative inset-y-0 left-0 btn variant-filled-error"
             >
                 Remove app
+            </button>
+        {:else if isDownloading}
+            <button
+                type="button"
+                class="relative inset-y-0 left-0 btn variant-filled-surface"
+            >
+                Install app
             </button>
         {:else}
             <button
