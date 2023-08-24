@@ -17,8 +17,11 @@
     let downloadProgress: number = 0;
     let status: string = "idle";
     let inst = false;
-
+    let isntFolder = "";
+    let instSize = "0 Bytes";
     $: installed = inst;
+    $: installFolder = isntFolder;
+    $: instSize = instSize;
 
     interface ProgressUpdate {
         status: string;
@@ -132,17 +135,50 @@
 
     async function checkIfInstalled() {
         if (localStorage.getItem("install-folder") != null) {
+            isntFolder =
+                localStorage.getItem("install-folder") +
+                "/" +
+                data.app.name +
+                "-" +
+                data.selectedVersion;
             await invoke("check_dir_exists", {
-                dir:
-                    localStorage.getItem("install-folder") +
-                    "/" +
-                    data.app.name +
-                    "-" +
-                    data.selectedVersion,
+                dir: isntFolder,
             }).then((val) => {
                 inst = !!val;
             });
+
+            if (inst) {
+                await invoke("get_dir_size", {
+                    dir: isntFolder,
+                }).then((val) => {
+                    instSize = formatBytes(val);
+                });
+            }
         } else inst = false;
+    }
+
+    function formatBytes(bytes: any, decimals = 2) {
+        if (!+bytes) return "0 Bytes";
+
+        const k = 1024;
+        const dm = decimals < 0 ? 0 : decimals;
+        const sizes = [
+            "Bytes",
+            "KiB",
+            "MiB",
+            "GiB",
+            "TiB",
+            "PiB",
+            "EiB",
+            "ZiB",
+            "YiB",
+        ];
+
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+        return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${
+            sizes[i]
+        }`;
     }
 
     const progressUpdate = setInterval(async function () {
@@ -157,14 +193,28 @@
 
 <h1 class="h1 mb-12">{parseName(data.app.name)}</h1>
 
-<div class="my-2 pb-16">
+<div class="my-2">
     <Flex justify="between">
-        <h5 class="h5">App version</h5>
+        <h5 class="h5">version</h5>
         <select class="select w-2/3" bind:value={data.selectedVersion}>
             {#each data.app.versions as version}
                 <option value={version}>{version}</option>
             {/each}
         </select>
+    </Flex>
+</div>
+
+<div class="my-2">
+    <Flex justify="between">
+        <h5 class="h5">path</h5>
+        <p class="text-xs text-slate-400">{installFolder}</p>
+    </Flex>
+</div>
+
+<div class="my-2 pb-8">
+    <Flex justify="between">
+        <h5 class="h5">size on disk</h5>
+        <p class="text-xs text-slate-400">{instSize}</p>
     </Flex>
 </div>
 
