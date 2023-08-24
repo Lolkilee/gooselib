@@ -83,7 +83,7 @@
             <input
                 class="input text-center w-3/4"
                 type="text"
-                placeholder="server password"
+                placeholder="install folder"
                 readonly={true}
                 bind:value={installFolder}
             />
