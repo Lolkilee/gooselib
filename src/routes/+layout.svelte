@@ -77,6 +77,10 @@
         }
     }
 
+    function parseName(inp: string): string {
+        return inp.replaceAll("_", " ");
+    }
+
     // On startup try to load
     onStart();
     onRefreshClick();
@@ -100,7 +104,7 @@
                     href="/apps/{app.name}"
                     selected={$page.url.pathname === "/apps/" + app.name}
                 >
-                    {app.name}
+                    <p class="text-center">{parseName(app.name)}</p>
                 </AppRailAnchor>
             {/each}
 

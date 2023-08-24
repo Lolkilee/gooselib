@@ -75,6 +75,10 @@
         }
     }
 
+    function parseName(inp: string): string {
+        return inp.replaceAll("_", " ");
+    }
+
     const progressUpdate = setInterval(function () {
         updateProgress();
     }, 100);
@@ -84,7 +88,7 @@
     });
 </script>
 
-<h1 class="h1 mb-12">{data.app.name}</h1>
+<h1 class="h1 mb-12">{parseName(data.app.name)}</h1>
 
 <div class="my-2 pb-16">
     <Flex justify="between">
