@@ -1,10 +1,10 @@
 [package]
 name = "app"
-version = "0.1.4"
+version = "0.1.5"
 description = "Gooselib, a web app to make sharing applications easier"
 authors = ["Thomas Goossen"]
-license = ""
-repository = ""
+license = "MIT"
+repository = "https://github.com/Lolkilee/gooselib"
 default-run = "app"
 edition = "2021"
 rust-version = "1.60"
