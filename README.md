@@ -7,5 +7,6 @@ A simple web app to manage sharing applications
 To start the Tauri app run:
 
 ```
+./build.sh
 cargo tauri dev
 ```
