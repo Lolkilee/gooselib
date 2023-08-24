@@ -70,7 +70,12 @@
       "csp": null
     },
     "updater": {
-      "active": false
+      "active": true,
+      "endpoints": [
+        "https://gist.githubusercontent.com/Lolkilee/96111c68c1e2744b561a580ebaa06327/raw/"
+      ],
+      "dialog": true,
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDEwNDNGQUI2MEIwN0Y1MUQKUldRZDlRY0x0dnBERUZkL3NhZUZ1dmRYRzROVFpGbjNPa29RMk5VWnFyWE45djNuNzhsN244Ky8K"
     },
     "windows": [
       {
