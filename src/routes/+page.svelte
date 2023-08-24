@@ -8,6 +8,7 @@
     } from "@skeletonlabs/skeleton";
     // @ts-ignore
     import Flex from "svelte-flex";
+    import { open } from "@tauri-apps/api/dialog";
 
     let serverAddress: string | null = "";
     let serverPassword: string | null = "";
@@ -36,6 +37,16 @@
         if (installFolder != null)
             localStorage.setItem("install-folder", installFolder);
         toastStore.trigger(saveMsg);
+    }
+
+    async function setInstallFolder() {
+        const selected = await open({
+            multiple: false,
+            directory: true,
+        });
+        if (!Array.isArray(selected)) {
+            installFolder = selected;
+        }
     }
 </script>
 
@@ -68,12 +79,20 @@
 <div class="my-2">
     <Flex justify="between">
         <h5 class="h5 ml-4">Install folder</h5>
-        <input
-            class="input text-center w-2/3"
-            type="text"
-            placeholder="server password"
-            bind:value={installFolder}
-        />
+        <div class="w-2/3">
+            <input
+                class="input text-center w-3/4"
+                type="text"
+                placeholder="server password"
+                readonly={true}
+                bind:value={installFolder}
+            />
+            <button
+                type="button"
+                class="btn variant-filled"
+                on:click={setInstallFolder}>Browse</button
+            >
+        </div>
     </Flex>
 </div>
 

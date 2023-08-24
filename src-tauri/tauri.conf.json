@@ -7,14 +7,13 @@
   },
   "package": {
     "productName": "gooselib",
-    "version": "0.1.3"
+    "version": "0.1.4"
   },
   "tauri": {
     "allowlist": {
       "all": false,
       "fs": {
-        "all": true,
-        "scope": ["$APP/*", "$DESKTOP/*"]
+        "all": true
       },
       "path":{
         "all": true
@@ -29,6 +28,9 @@
         "scope": [
             {"name": "../svr/build/gl-downloader", "sidecar": true, "args": true}
         ]
+      },
+      "dialog": {
+        "all": true
       }
     },
     "bundle": {

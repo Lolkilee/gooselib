@@ -4,6 +4,7 @@
     import "../app.postcss";
     import Icon from "@iconify/svelte";
     import { page } from "$app/stores";
+    import { getVersion } from "@tauri-apps/api/app";
     import { ResponseType, getClient } from "@tauri-apps/api/http";
     import {
         AppShell,
@@ -12,9 +13,16 @@
         toastStore,
         type ToastSettings,
         Toast,
+        Modal,
     } from "@skeletonlabs/skeleton";
 
+    let appVersion: string = "undefined";
+
     export let lib: Library = { apps: [] };
+
+    async function onStart() {
+        appVersion = await getVersion();
+    }
 
     async function onRefreshClick() {
         if (localStorage.getItem("saved-address") != null) {
@@ -70,10 +78,16 @@
         }
     }
 
+    function parseName(inp: string): string {
+        return inp.replaceAll("_", " ");
+    }
+
     // On startup try to load
+    onStart();
     onRefreshClick();
 </script>
 
+<Modal />
 <Toast />
 
 <AppShell>
@@ -92,12 +106,12 @@
                     href="/apps/{app.name}"
                     selected={$page.url.pathname === "/apps/" + app.name}
                 >
-                    {app.name}
+                    <p class="text-center">{parseName(app.name)}</p>
                 </AppRailAnchor>
             {/each}
 
             <svelte:fragment slot="trail">
-                <div class="card p-4">
+                <div class="p-4">
                     <button
                         on:click={onRefreshClick}
                         type="button"
@@ -114,4 +128,9 @@
             <slot />
         </div>
     </center>
+    <svelte:fragment slot="pageFooter"
+        ><p class="text-right text-slate-600">
+            Gooselib v{appVersion}
+        </p></svelte:fragment
+    >
 </AppShell>
