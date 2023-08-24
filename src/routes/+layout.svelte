@@ -13,6 +13,7 @@
         toastStore,
         type ToastSettings,
         Toast,
+        Modal,
     } from "@skeletonlabs/skeleton";
 
     let appVersion: string = "undefined";
@@ -86,6 +87,7 @@
     onRefreshClick();
 </script>
 
+<Modal />
 <Toast />
 
 <AppShell>
@@ -109,7 +111,7 @@
             {/each}
 
             <svelte:fragment slot="trail">
-                <div class="card p-4">
+                <div class="p-4">
                     <button
                         on:click={onRefreshClick}
                         type="button"
