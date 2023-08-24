@@ -15,6 +15,7 @@
     export let data: PageData;
 
     let downloadProgress: number = 0;
+    let downloadSpeed: string = "";
     let status: string = "idle";
     let inst = false;
     let isntFolder = "";
@@ -26,6 +27,7 @@
     interface ProgressUpdate {
         status: string;
         progress: number;
+        speed: string;
     }
 
     function updateProgress() {
@@ -35,6 +37,7 @@
         if (jString != null) {
             const update: ProgressUpdate = JSON.parse(jString);
             downloadProgress = update.progress;
+            downloadSpeed = update.speed;
             status = update.status;
 
             if (update.status == "done") {
@@ -44,6 +47,7 @@
             }
         } else {
             downloadProgress = 0;
+            downloadSpeed = "";
             status = "idle";
         }
     }
@@ -237,10 +241,15 @@
                 Install app
             </button>
         {/if}
-        <div class="w-1/4">
-            <ProgressRadial value={downloadProgress} width="w-24"
-                >{downloadProgress.toFixed(2)}%</ProgressRadial
-            >
+        <div class="w-1/2">
+            <Flex justify="between">
+                <p class="text-xs text-slate-400">
+                    Download speed: {downloadSpeed}
+                </p>
+                <ProgressRadial value={downloadProgress} width="w-20"
+                    >{downloadProgress.toFixed(2)}%</ProgressRadial
+                >
+            </Flex>
         </div>
     </Flex>
 </div>
