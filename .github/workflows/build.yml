@@ -52,7 +52,6 @@ jobs:
           releaseBody: "See the assets to download this version and install."
           releaseDraft: true
           prerelease: false
-      - uses: actions/checkout@v3
       - name: Deploy
         uses: exuanbo/actions-deploy-gist@v1
         with:
@@ -60,3 +59,4 @@ jobs:
           gist_id: 96111c68c1e2744b561a580ebaa06327
           file_path: latest.json
           file_type: text
+      - uses: actions/checkout@v3
