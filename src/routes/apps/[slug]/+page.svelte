@@ -202,7 +202,7 @@
 
     const dirSizeUpdate = setInterval(async function () {
         await checkDirSize();
-    }, 1000);
+    }, 10000);
 
     onDestroy(() => {
         clearInterval(progressUpdate);
@@ -247,7 +247,7 @@
             >
                 Remove app
             </button>
-        {:else if isDownloading}
+        {:else if downloading}
             <button
                 type="button"
                 class="relative inset-y-0 left-0 btn variant-filled-surface"
