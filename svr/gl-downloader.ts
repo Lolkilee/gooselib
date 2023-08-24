@@ -3,7 +3,7 @@
 // Args: [url] [path (folder)] [password]
 // Progress is sent through stdout json
 
-import { tar, GzipStream } from "https://deno.land/x/compress@v0.4.4/mod.ts";
+import { tgz } from "https://deno.land/x/compress@v0.4.4/mod.ts";
 import { existsSync } from "https://deno.land/std@0.198.0/fs/mod.ts";
 
 let status = "idle";
@@ -17,7 +17,6 @@ async function installApp(url: string, path: string, password: string) {
     const interval = setInterval(() => { logProgess(); }, 100);
 
     const tmpFile = "./tmp";
-    const swapFile = "./swap";
     progress = 0;
     try {
         // Download file from server
@@ -46,26 +45,14 @@ async function installApp(url: string, path: string, password: string) {
             await Deno.remove(path, { recursive: true });
         
         status = "installing";
-        // Uncompress from gzip to tar
-        const gzip = new GzipStream();
-        gzip.on("progress", (prg: string) => {
-            const n = parseFloat(prg.replace(/[^\d.-]/g, ''));
-            progress = 95 + ((n / 100) * 3);
-        });
-        await gzip.uncompress(tmpFile, swapFile);
-        await Deno.rename(swapFile, tmpFile);
-        
-        // Uncompress tar to folder
-        progress = 98;
-        await tar.uncompress(tmpFile, path);
+        progress = 95;
+        await tgz.uncompress(tmpFile, path);
         
         // Delete tmp and swap file
         status = "done";
         progress = 100;
         if (existsSync(tmpFile))
             await Deno.remove(tmpFile);
-        if (existsSync(swapFile))
-            await Deno.remove(swapFile);
         logProgess();
     } catch (err) {
         console.log(err);

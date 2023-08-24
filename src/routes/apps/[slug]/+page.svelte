@@ -17,7 +17,6 @@
     }
 
     function updateProgress() {
-        console.log(data.app.name + "-" + data.selectedVersion + "-progress");
         const jString = sessionStorage.getItem(
             data.app.name + "-" + data.selectedVersion + "-progress"
         );
@@ -25,6 +24,13 @@
             const update: ProgressUpdate = JSON.parse(jString);
             downloadProgress = update.progress;
             status = update.status;
+
+            if (update.status == "done") {
+                localStorage.setItem(
+                    data.app.name + "-installed-version",
+                    data.selectedVersion
+                );
+            }
         } else {
             downloadProgress = 0;
             status = "idle";
@@ -63,20 +69,35 @@
 
             // On progress update
             command.stdout.on("data", (line) => {
-                console.log(line);
                 sessionStorage.setItem(
                     data.app.name + "-" + data.selectedVersion + "-progress",
                     line
                 );
-                console.log(line);
             });
 
             await command.execute();
         }
     }
 
+    async function removeApp() {
+        //TODO
+    }
+
     function parseName(inp: string): string {
         return inp.replaceAll("_", " ");
+    }
+
+    function checkIfInstalled(): boolean {
+        if (
+            localStorage.getItem(data.app.name + "-installed-version") != null
+        ) {
+            return (
+                localStorage.getItem(data.app.name + "-installed-version") ==
+                data.selectedVersion
+            );
+        }
+
+        return false;
     }
 
     const progressUpdate = setInterval(function () {
@@ -103,13 +124,23 @@
 
 <div class="my-2">
     <Flex justify="evenly">
-        <button
-            on:click={installApp}
-            type="button"
-            class="relative inset-y-0 left-0 btn variant-filled-primary"
-        >
-            Install app
-        </button>
+        {#if checkIfInstalled()}
+            <button
+                on:click={removeApp}
+                type="button"
+                class="relative inset-y-0 left-0 btn variant-filled-primary"
+            >
+                Remove app
+            </button>
+        {:else}
+            <button
+                on:click={installApp}
+                type="button"
+                class="relative inset-y-0 left-0 btn variant-filled-primary"
+            >
+                Install app
+            </button>
+        {/if}
         <div class="w-1/4">
             <ProgressRadial value={downloadProgress} width="w-24"
                 >{downloadProgress.toFixed(2)}%</ProgressRadial
