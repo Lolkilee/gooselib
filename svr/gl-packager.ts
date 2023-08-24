@@ -1,14 +1,24 @@
 // Packager script for folder to .app conversion
 // Input ./gl-packager [input folder] [upload password] [app name] [version] [url]
 
-import { tar } from "https://deno.land/x/compress@v0.4.4/mod.ts";
+import { existsSync } from "https://deno.land/std@0.198.0/fs/exists.ts";
+import { tar, GzipStream } from "https://deno.land/x/compress@v0.4.4/mod.ts";
 
 const tmpFile = "./tmp";
+const swapFile = "./swap";
 
 export async function pack(input: string, passServer: string, appName: string, version: string, url: string) {
     try {
-        // Compress
+        // Compress to tar
         await tar.compress(input, tmpFile);
+
+        // Compress to gzip
+        const gzip = new GzipStream();
+        gzip.on("progress", (progress: string) => {
+            console.log("compression progress: " + progress); // 0.00% => 100.00%
+        });
+        await gzip.compress(tmpFile, swapFile);
+        await Deno.rename(swapFile, tmpFile);
         
         // Send post request to server
         const file = await Deno.open(tmpFile, { read: true });
@@ -23,8 +33,19 @@ export async function pack(input: string, passServer: string, appName: string, v
             body
         });
         console.log(await resp.text());
-        await Deno.remove(tmpFile);
-        await fetch(url + "/refresh");
+
+        // Cleanup
+        if (existsSync(tmpFile))
+            await Deno.remove(tmpFile);
+        if (existsSync(swapFile))
+            await Deno.remove(swapFile);
+        
+        // Server refresh
+        await fetch(url + "/refresh", {
+            headers: {
+                "pw": passServer
+            }
+        });
     } catch (err) {
         console.log(err);
     }
