@@ -7,7 +7,7 @@
   },
   "package": {
     "productName": "gooselib",
-    "version": "0.1.5"
+    "version": "1.0.0"
   },
   "tauri": {
     "allowlist": {
@@ -26,7 +26,8 @@
       "shell": {
         "sidecar": true,
         "scope": [
-            {"name": "../svr/build/gl-downloader", "sidecar": true, "args": true}
+            {"name": "../svr/build/gl-downloader", "sidecar": true, "args": true },
+            {"name": "../svr/build/gl-packager", "sidecar": true, "args": true }
         ]
       },
       "dialog": {

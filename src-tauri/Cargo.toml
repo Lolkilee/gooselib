@@ -1,6 +1,6 @@
 [package]
 name = "app"
-version = "0.1.5"
+version = "1.0.0"
 description = "Gooselib, a web app to make sharing applications easier"
 authors = ["Thomas Goossen"]
 license = "MIT"
