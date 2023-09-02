@@ -5,14 +5,21 @@
         toastStore,
         type ToastSettings,
         LightSwitch,
+        type ModalSettings,
+        modalStore,
     } from "@skeletonlabs/skeleton";
     // @ts-ignore
     import Flex from "svelte-flex";
     import { open } from "@tauri-apps/api/dialog";
+    import { Command } from "@tauri-apps/api/shell";
 
     let serverAddress: string | null = "";
     let serverPassword: string | null = "";
     let installFolder: string | null = "";
+    let uploadStatus: "";
+    let disableUpload = false;
+
+    let folder: string, password: string, appName: string, version: string;
 
     const saveMsg: ToastSettings = {
         message: "Settings saved!",
@@ -48,6 +55,91 @@
             installFolder = selected;
         }
     }
+
+    function uploadToServer() {
+        modalStore.trigger(passModal);
+    }
+
+    async function selectUploadFolder() {
+        const selected = await open({
+            multiple: false,
+            directory: true,
+        });
+        if (!Array.isArray(selected) && selected != null) {
+            folder = selected;
+            startUpload(folder, password, appName, version);
+        }
+    }
+
+    async function startUpload(
+        folder: string,
+        password: string,
+        appName: string,
+        version: string
+    ) {
+        let url = localStorage.getItem("saved-address");
+        if (url != null) {
+            const uploadCommand = Command.sidecar("../svr/build/gl-packager", [
+                folder,
+                password,
+                appName,
+                version,
+                "http://" + url + ":8765",
+            ]);
+
+            uploadCommand.stdout.on("data", (line) => {
+                uploadStatus = line;
+            });
+
+            await uploadCommand.execute();
+        }
+    }
+
+    // Modals
+    const passModal: ModalSettings = {
+        type: "prompt",
+        title: "Enter upload values",
+        body: "Type in the upload password below",
+        value: "",
+        valueAttr: { type: "password", required: true },
+
+        response: (r: string) => {
+            if (r != "") {
+                password = r;
+                modalStore.trigger(nameModal);
+            }
+        },
+    };
+
+    const nameModal: ModalSettings = {
+        type: "prompt",
+        title: "Enter upload values",
+        body: "Type in the app name below (Use `_` for spaces)",
+        value: "",
+        valueAttr: { type: "text", required: true },
+
+        response: (r: string) => {
+            if (r != "") {
+                appName = r;
+                modalStore.trigger(versionModal);
+            }
+        },
+    };
+
+    const versionModal: ModalSettings = {
+        type: "prompt",
+        title: "Enter upload values",
+        body: "Type in the app version below (spaces not allowed!)",
+        value: "",
+        valueAttr: { type: "text", required: true },
+
+        response: async (r: string) => {
+            if (r != "") {
+                version = r;
+                await selectUploadFolder();
+            }
+        },
+    };
 </script>
 
 <h1 class="h1 mb-12">Settings</h1>
@@ -91,6 +183,27 @@
                 type="button"
                 class="btn variant-filled"
                 on:click={setInstallFolder}>Browse</button
+            >
+        </div>
+    </Flex>
+</div>
+
+<div class="my-2">
+    <Flex justify="between">
+        <h5 class="h5 ml-4">Upload to server</h5>
+        <div class="w-2/3">
+            <input
+                class="input text-center w-3/4"
+                type="text"
+                placeholder="..."
+                readonly={true}
+                bind:value={uploadStatus}
+            />
+            <button
+                disabled={disableUpload}
+                type="button"
+                class="btn variant-filled"
+                on:click={uploadToServer}>Upload</button
             >
         </div>
     </Flex>
