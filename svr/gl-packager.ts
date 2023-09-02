@@ -9,11 +9,13 @@ const tmpFile = "./tmp";
 export async function pack(input: string, passServer: string, appName: string, version: string, url: string) {
     try {
         // Compress to tar
+        console.log("Compressing...");
         await tgz.compress(input, tmpFile);
         
         // Send post request to server
         const file = await Deno.open(tmpFile, { read: true });
         const body = file.readable;
+        console.log("Uploading...");
         const resp = await fetch(url + "/upload", {
             method: "POST",
             headers: {
@@ -23,7 +25,6 @@ export async function pack(input: string, passServer: string, appName: string, v
             },
             body
         });
-        console.log(await resp.text());
 
         // Cleanup
         if (existsSync(tmpFile))
@@ -35,6 +36,7 @@ export async function pack(input: string, passServer: string, appName: string, v
                 "pw": passServer
             }
         });
+        console.log(await resp.text());
     } catch (err) {
         console.log(err);
     }

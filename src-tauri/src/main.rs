@@ -6,6 +6,7 @@ extern crate fs_extra;
 use fs_extra::dir::get_size;
 use std::fs;
 use std::path::Path;
+use tauri::Manager;
 
 #[tauri::command]
 fn check_dir_exists(dir: String) -> bool {
@@ -25,6 +26,14 @@ fn get_dir_size(dir: String) -> u64 {
 
 fn main() {
     tauri::Builder::default()
+        .setup(|app| {
+            #[cfg(debug_assertions)] // only include this code on debug builds
+            {
+                let window = app.get_window("main").unwrap();
+                window.open_devtools();
+            }
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             check_dir_exists,
             remove_dir,
