@@ -21,8 +21,12 @@ fn remove_dir(dir: String) {
 
 #[tauri::command]
 fn get_dir_size(dir: String) -> u64 {
-    let folder_size = get_size(dir).unwrap();
-    folder_size
+    let mut size = 0;
+    if check_dir_exists(dir.clone()) {
+        let folder_size = get_size(dir).unwrap();
+        size = folder_size;
+    }
+    size
 }
 
 #[tauri::command]
@@ -38,7 +42,8 @@ fn open_path(path: String) {
 
     #[cfg(target_os = "windows")]
     {
-        Command::new("explorer").arg(path).spawn().unwrap();
+        let win_path = str::replace(path.as_str(), "/", "\\");
+        Command::new("explorer").arg(win_path).spawn().unwrap();
     }
 
     #[cfg(target_os = "linux")]
