@@ -130,6 +130,10 @@
                     data.selectedVersion,
             });
 
+            isDownloading = false;
+            downloadProgress = 0;
+            downloadSpeed = "";
+
             const msg: ToastSettings = {
                 message:
                     parseName(data.app.name) + " was deleted from harddrive",
@@ -169,6 +173,20 @@
                 inst = !!val;
             });
         } else inst = false;
+    }
+
+    async function openFolder() {
+        instFolder =
+            localStorage.getItem("install-folder") +
+            "/" +
+            data.app.name +
+            "-" +
+            data.selectedVersion +
+            "/";
+        console.log(instFolder);
+        await invoke("open_path", {
+            path: instFolder,
+        });
     }
 
     function formatBytes(bytes: any, decimals = 2) {
@@ -241,6 +259,13 @@
     <Flex justify="evenly">
         {#if installed}
             <button
+                on:click={openFolder}
+                type="button"
+                class="relative inset-y-0 left-0 btn variant-filled"
+            >
+                Open folder
+            </button>
+            <button
                 on:click={removeAppPrompt}
                 type="button"
                 class="relative inset-y-0 left-0 btn variant-filled-error"
@@ -263,15 +288,17 @@
                 Install app
             </button>
         {/if}
-        <div class="w-1/2">
-            <Flex justify="between">
-                <p class="text-xs text-slate-400">
-                    Download speed: {downloadSpeed}
-                </p>
-                <ProgressRadial value={downloadProgress} width="w-20"
-                    >{downloadProgress.toFixed(2)}%</ProgressRadial
-                >
-            </Flex>
-        </div>
+        {#if !installed}
+            <div class="w-1/2">
+                <Flex justify="between">
+                    <p class="text-xs text-slate-400">
+                        Download speed: {downloadSpeed}
+                    </p>
+                    <ProgressRadial value={downloadProgress} width="w-20"
+                        >{downloadProgress.toFixed(2)}%</ProgressRadial
+                    >
+                </Flex>
+            </div>
+        {/if}
     </Flex>
 </div>
