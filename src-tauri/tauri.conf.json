@@ -42,7 +42,8 @@
         "depends": []
       },
       "externalBin": [
-        "../svr/build/gl-downloader"
+        "../svr/build/gl-downloader",
+        "../svr/build/gl-packager"
       ],
       "icon": [
         "icons/32x32.png",
