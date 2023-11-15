@@ -6,6 +6,7 @@ extern crate fs_extra;
 use fs_extra::dir::get_size;
 use std::fs;
 use std::path::Path;
+use std::process::Command;
 use tauri::Manager;
 
 #[tauri::command]
@@ -24,6 +25,28 @@ fn get_dir_size(dir: String) -> u64 {
     folder_size
 }
 
+#[tauri::command]
+fn open_path(path: String) {
+    // https://stackoverflow.com/questions/66485945/with-rust-open-explorer-on-a-file
+
+    println!("{}", path);
+
+    #[cfg(target_os = "macos")]
+    {
+        Command::new("open").arg(path).spawn().unwrap();
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        Command::new("explorer").arg(path).spawn().unwrap();
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        Command::new("xdg-open").arg(path).spawn().unwrap();
+    }
+}
+
 fn main() {
     tauri::Builder::default()
         .setup(|app| {
@@ -37,7 +60,8 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             check_dir_exists,
             remove_dir,
-            get_dir_size
+            get_dir_size,
+            open_path
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
