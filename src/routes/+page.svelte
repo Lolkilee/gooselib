@@ -88,6 +88,7 @@
             ]);
 
             uploadCommand.stdout.on("data", (line) => {
+                console.log(line);
                 uploadStatus = line;
             });
 
