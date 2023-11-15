@@ -5,5 +5,5 @@ for plat in ${platforms[@]}; do
 done
 
 for plat in ${platforms[@]}; do
-    deno compile -A -o ./build/gl-packager-$plat --target $plat ./svr/gl-packager.ts
+    deno compile -A -o ./svr/build/gl-packager-$plat --target $plat ./svr/gl-packager.ts
 done
