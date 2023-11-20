@@ -3,13 +3,16 @@
 // Args: [url] [path (folder)] [password]
 // Progress is sent through stdout json
 
-import { tgz } from "https://deno.land/x/compress@v0.4.4/mod.ts";
+import { tar } from "https://deno.land/x/compress@v0.4.4/mod.ts";
 import { existsSync } from "https://deno.land/std@0.198.0/fs/mod.ts";
 
 const AVERAGE_POOL_SIZE = 512; //how many samples to take the average from
 
 let status = "idle";
 let progress = 0;
+let bytesWritten = 0;
+let t1 = 0;
+
 const measurements: number[] = [0];
 
 function logProgess() {
@@ -23,6 +26,26 @@ function averageSpeed(): string {
     return formatBytes(tot / measurements.length) + "/s";
 }
 
+class PrintStream extends TransformStream<Uint8Array, Uint8Array> {    
+    constructor(contentLength: number) {
+        super({
+            transform: (chunk, controller) => {
+                bytesWritten += chunk.length;
+                const t2 = performance.now();
+                const dt = t2 - t1;
+
+                if (measurements.length >= AVERAGE_POOL_SIZE) 
+                    measurements.shift();
+                measurements.push((chunk.length / 8) / (dt * 0.001));
+
+                progress = (bytesWritten / contentLength) * 94;
+                controller.enqueue(chunk);
+                t1 = performance.now();
+            }
+        })
+    }
+}
+
 async function installApp(url: string, path: string, password: string) {
     const interval = setInterval(() => { logProgess(); }, 100);
 
@@ -33,39 +56,23 @@ async function installApp(url: string, path: string, password: string) {
         status = "downloading";
         const headers = new Headers();
         headers.append("pw", password);
-        const res = await fetch(new Request(url, {headers:headers}));
+        const res = await fetch(new Request(url, { headers: headers }));
         const file = await Deno.open(tmpFile, { create: true, write: true });
 
         let lHeader = res.headers.get("Content-Length");
         if (lHeader == null)
             lHeader = "0";
-        
+               
         const contentLength = parseInt(lHeader);
-        let bytesWritten = 0;
-        if (res.body != null) {
-            let t1 = performance.now();
-            for await (const chunk of res.body) {
-                await file.write(chunk);
-                bytesWritten += chunk.length;
-                const t2 = performance.now();
-                const dt = t2 - t1;
-
-                if (measurements.length >= AVERAGE_POOL_SIZE) 
-                    measurements.shift();
-                measurements.push((chunk.length / 8) / (dt * 0.001));
-
-                progress = (bytesWritten / contentLength) * 94;
-                t1 = performance.now();
-            }
-        }
-        file.close();
+        bytesWritten = 0;
+        await res.body?.pipeThrough(new PrintStream(contentLength)).pipeThrough(new DecompressionStream("gzip")).pipeTo(file.writable);
 
         if (existsSync(path))
             await Deno.remove(path, { recursive: true });
         
         status = "installing";
         progress = 95;
-        await tgz.uncompress(tmpFile, path);
+        await tar.uncompress(tmpFile, path);
         
         // Delete tmp and swap file
         status = "done";
