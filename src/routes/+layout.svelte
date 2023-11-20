@@ -92,7 +92,7 @@
 
 <AppShell>
     <svelte:fragment slot="sidebarLeft">
-        <AppRail>
+        <AppRail width="w-20" class="overflow-x-hidden">
             <svelte:fragment slot="lead">
                 <AppRailAnchor href="/" selected={$page.url.pathname === "/"}>
                     <center>
@@ -105,8 +105,11 @@
                 <AppRailAnchor
                     href="/apps/{app.name}"
                     selected={$page.url.pathname === "/apps/" + app.name}
+                    width="w-20"
                 >
-                    <p class="text-center">{parseName(app.name)}</p>
+                    <span class="text-center w-full text-xs">
+                        {parseName(app.name)}
+                    </span>
                 </AppRailAnchor>
             {/each}
 
