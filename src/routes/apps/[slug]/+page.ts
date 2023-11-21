@@ -35,8 +35,6 @@ async function loadAppInfo(appName: string, version: string): Promise<AppInfo> {
         }
     );
 
-    console.log(res);
-
     if (res.status == 200)
         return res.data;
     else
