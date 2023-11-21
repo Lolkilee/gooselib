@@ -27,6 +27,7 @@
     let isDownloading = false;
     let enableAdminSettings = false;
     let lastVersionUpdate: string | null = null;
+    let startable = false;
 
     $: installed = inst;
     $: installFolder = instFolder;
@@ -34,6 +35,7 @@
     $: downloading = isDownloading;
     $: data.selectedVersion && loadAppInfo(data.app.name, data.selectedVersion);
     $: data.selectedVersion && checkIfInstalled();
+    $: data.selectedVersion && isStartable();
 
     let downloadCommand: Command;
 
@@ -244,8 +246,6 @@
                 }
             );
 
-            console.log(res);
-
             if (res.status == 200) data.info = res.data;
             else data.info = { exec: "" };
             lastVersionUpdate = version;
@@ -261,6 +261,33 @@
             data.selectedVersion +
             "/"
         );
+    }
+
+    function isStartable() {
+        startable = data.info.exec != "";
+    }
+
+    async function startApp() {
+        console.log(
+            data.info.exec.replace(
+                ".",
+                localStorage.getItem("install-folder") +
+                    "/" +
+                    data.app.name +
+                    "-" +
+                    data.selectedVersion
+            )
+        );
+        await invoke("start_exec", {
+            path: data.info.exec.replace(
+                ".",
+                localStorage.getItem("install-folder") +
+                    "/" +
+                    data.app.name +
+                    "-" +
+                    data.selectedVersion
+            ),
+        });
     }
 
     function uploadInfo() {
@@ -402,13 +429,23 @@
 <div class="my-2 pt-8">
     <Flex justify="evenly">
         {#if installed}
-            <button
-                on:click={openFolder}
-                type="button"
-                class="relative inset-y-0 left-0 btn variant-filled"
-            >
-                Open folder
-            </button>
+            {#if startable}
+                <button
+                    on:click={startApp}
+                    type="button"
+                    class="relative inset-y-0 left-0 btn variant-filled-primary"
+                >
+                    Start app
+                </button>
+            {:else}
+                <button
+                    on:click={openFolder}
+                    type="button"
+                    class="relative inset-y-0 left-0 btn variant-filled"
+                >
+                    Open folder
+                </button>
+            {/if}
             <button
                 on:click={removeAppPrompt}
                 type="button"

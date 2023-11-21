@@ -52,6 +52,16 @@ fn open_path(path: String) {
     }
 }
 
+#[tauri::command]
+fn start_exec(path: String) {
+    let mut e_path = path;
+    #[cfg(target_os = "windows")]
+    {
+        e_path = str::replace(e_path.as_str(), "/", "\\");
+    }
+    let _ = Command::new(e_path).spawn();
+}
+
 fn main() {
     tauri::Builder::default()
         .setup(|app| {
@@ -66,7 +76,8 @@ fn main() {
             check_dir_exists,
             remove_dir,
             get_dir_size,
-            open_path
+            open_path,
+            start_exec
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
