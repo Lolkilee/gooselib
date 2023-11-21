@@ -148,8 +148,6 @@ async function serveHttp(conn: Deno.Conn) {
                                 const verName = requestEvent.request.headers.get("app-version");
 
                                 if (appName != null && verName != null) {
-                                
-
                                     if (!existsSync(FILES_FOLDER + "/" + appName))
                                         await Deno.mkdir(FILES_FOLDER + "/" + appName);
 
