@@ -33,6 +33,7 @@
     $: instSize = instSize;
     $: downloading = isDownloading;
     $: data.selectedVersion && loadAppInfo(data.app.name, data.selectedVersion);
+    $: data.selectedVersion && checkIfInstalled();
 
     let downloadCommand: Command;
 
@@ -251,6 +252,17 @@
         }
     }
 
+    function getPath(): string {
+        return (
+            localStorage.getItem("install-folder") +
+            "/" +
+            data.app.name +
+            "-" +
+            data.selectedVersion +
+            "/"
+        );
+    }
+
     function uploadInfo() {
         const passModal: ModalSettings = {
             type: "prompt",
@@ -332,7 +344,7 @@
 <div class="my-2">
     <Flex justify="between">
         <h5 class="h5">path</h5>
-        <p class="text-xs text-slate-400">{installFolder}</p>
+        <p class="text-xs text-slate-400">{getPath()}</p>
     </Flex>
 </div>
 
