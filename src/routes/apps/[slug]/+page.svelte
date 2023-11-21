@@ -14,6 +14,7 @@
     import { Command } from "@tauri-apps/api/shell";
     import type { PageData } from "./$types";
     import { invoke } from "@tauri-apps/api/tauri";
+    import { Body, ResponseType, getClient } from "@tauri-apps/api/http";
 
     export let data: PageData;
 
@@ -25,12 +26,13 @@
     let instSize = "0 Bytes";
     let isDownloading = false;
     let enableAdminSettings = false;
+    let lastVersionUpdate: string | null = null;
 
     $: installed = inst;
     $: installFolder = instFolder;
     $: instSize = instSize;
     $: downloading = isDownloading;
-    $: adminSettings = enableAdminSettings;
+    $: data.selectedVersion && loadAppInfo(data.app.name, data.selectedVersion);
 
     let downloadCommand: Command;
 
@@ -218,6 +220,87 @@
         }`;
     }
 
+    async function loadAppInfo(appName: string, version: string) {
+        if (lastVersionUpdate != version) {
+            const address = localStorage.getItem("saved-address");
+            const client = await getClient();
+            const reqHeaders: Record<string, any> = {
+                pw: localStorage.getItem("server-password"),
+            };
+            const res = await client.get<AppInfo>(
+                "http://" +
+                    address +
+                    ":" +
+                    8765 +
+                    "/" +
+                    appName +
+                    "/" +
+                    version +
+                    ".app.json",
+                {
+                    responseType: ResponseType.JSON,
+                    headers: reqHeaders,
+                }
+            );
+
+            console.log(res);
+
+            if (res.status == 200) data.info = res.data;
+            else data.info = { exec: "" };
+            lastVersionUpdate = version;
+        }
+    }
+
+    function uploadInfo() {
+        const passModal: ModalSettings = {
+            type: "prompt",
+            title: "Enter upload values",
+            body: "Type in the upload password below",
+            value: "",
+            valueAttr: { type: "password", required: true },
+
+            response: async (r: string) => {
+                if (r != "") {
+                    const info: AppInfo = data.info;
+                    const reqHeaders = {
+                        pw: r,
+                        "app-name": data.app.name,
+                        "app-version": data.selectedVersion,
+                    };
+
+                    const address = localStorage.getItem("saved-address");
+                    const client = await getClient();
+                    const res = await client.post(
+                        "http://" + address + ":" + 8765 + "/upload-info",
+                        Body.json(info),
+                        {
+                            headers: reqHeaders,
+                            responseType: ResponseType.Text,
+                        }
+                    );
+
+                    if (res.status == 200) {
+                        const errMsg: ToastSettings = {
+                            message: "Upload accepted",
+                            timeout: 5000,
+                            background: "variant-filled-primary",
+                        };
+                        toastStore.trigger(errMsg);
+                    } else {
+                        const errMsg: ToastSettings = {
+                            message: "Upload failed",
+                            timeout: 5000,
+                            background: "variant-filled-error",
+                        };
+                        toastStore.trigger(errMsg);
+                    }
+                }
+            },
+        };
+
+        modalStore.trigger(passModal);
+    }
+
     const progressUpdate = setInterval(async function () {
         updateProgress();
         await checkIfInstalled();
@@ -260,7 +343,7 @@
     </Flex>
 </div>
 
-<div class="my-2 pb-8">
+<div class="my-2">
     <Flex justify="between">
         <h5 class="h5">admin settings</h5>
         <RadioGroup>
@@ -280,7 +363,31 @@
     </Flex>
 </div>
 
-<div class="my-2">
+{#if enableAdminSettings}
+    <div class="my-2">
+        <Flex justify="between">
+            <h5 class="h5">executable location</h5>
+            <input
+                class="input w-2/3 text-right"
+                type="text"
+                placeholder="executable location"
+                bind:value={data.info.exec}
+            />
+        </Flex>
+    </div>
+    <div class="my-2">
+        <Flex justify="between">
+            <div />
+            <button
+                type="button"
+                class="btn variant-filled-primary"
+                on:click={uploadInfo}>Upload changes</button
+            >
+        </Flex>
+    </div>
+{/if}
+
+<div class="my-2 pt-8">
     <Flex justify="evenly">
         {#if installed}
             <button
@@ -302,7 +409,7 @@
                 type="button"
                 class="relative inset-y-0 left-0 btn variant-filled-surface"
             >
-                Install app
+                {status}
             </button>
         {:else}
             <button

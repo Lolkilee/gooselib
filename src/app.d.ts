@@ -19,6 +19,11 @@ declare global {
         }
     }
 
+    interface AppInfo {
+        exec: string;
+    }
+
+
     interface Library {
         apps: AppDefinition[];
     }
