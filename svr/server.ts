@@ -49,7 +49,7 @@ class Library {
                 appCount++;
                 
                 for await (const vEntry of Deno.readDir(FILES_FOLDER + "/" + dirEntry.name)) {
-                    if (vEntry.name.includes(".app") && vEntry.isFile) {
+                    if (vEntry.name.includes(".app") && !vEntry.name.includes(".json") && vEntry.isFile) {
                         versions.push(vEntry.name.replace(".app", ""));
                         vCount++;
                     }
@@ -61,15 +61,6 @@ class Library {
 
         console.log("Rebuilt app library with " + appCount + " apps and " + vCount + " total versions.");
         this.apps = arr;
-    }
-}
-
-// Data holder for optional data of application
-class AppInfo {
-    exec: string;
-
-    constructor(exec: string) {
-        this.exec = exec;
     }
 }
 
@@ -222,7 +213,7 @@ async function serveHttp(conn: Deno.Conn) {
 
                         // Send file back to request
                         const readableStream = file.readable;
-                        const response = new Response(readableStream, { headers: { "Content-Length": content_length } });
+                        const response = new Response(readableStream, { headers: { "Content-Length": content_length }, status: 200 });
                         await requestEvent.respondWith(response);
                     }
                 } else {
