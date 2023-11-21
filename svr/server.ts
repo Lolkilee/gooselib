@@ -64,6 +64,15 @@ class Library {
     }
 }
 
+// Data holder for optional data of application
+class AppInfo {
+    exec: string;
+
+    constructor(exec: string) {
+        this.exec = exec;
+    }
+}
+
 async function updateMetaData() {
     // Create the file to write to
     if (!existsSync(FILES_FOLDER + "/apps.json")) {
@@ -154,6 +163,38 @@ async function serveHttp(conn: Deno.Conn) {
                                     await requestEvent.respondWith(new Response("Upload accepted", { status: 200 }));
                                 } else {
                                     await requestEvent.respondWith(badReqResp);
+                                }
+                            } else {
+                                const forbiddenResp = new Response("403 Forbidden", { status: 403 });
+                                await requestEvent.respondWith(forbiddenResp);
+                            }
+                        } else {
+                            await requestEvent.respondWith(badReqResp);
+                        }
+                    }
+                    
+                    // Upload / overwrite additional information in versionName.app.json
+                    else if (url.pathname == "/upload-info" && requestEvent.request.method == "POST"
+                        && requestEvent.request.headers.has("app-name") && requestEvent.request.headers.has("app-version")
+                        && requestEvent.request.headers.has("pw")) {
+                        
+                        const badReqResp = new Response("400 Bad Request", { status: 400 });
+                        const pw = requestEvent.request.headers.get("pw");
+                        
+                        if (pw != null) {
+                            if (pw == uploadPassword) {
+                                const appName = requestEvent.request.headers.get("app-name");
+                                const verName = requestEvent.request.headers.get("app-version");
+                                const info = requestEvent.request.body;
+                                
+                                if (appName != null && verName != null && info != null) {
+                                    if (existsSync(FILES_FOLDER + "/" + appName + "/" + verName + ".app")) {
+                                        const file = await Deno.open(FILES_FOLDER + "/" + appName + "/" + verName + ".app.json", { create: true, write: true });
+                                        await info.pipeTo(file.writable);
+                                        await requestEvent.respondWith(new Response("Upload accepted", { status: 200 }));
+                                    } else {
+                                        await requestEvent.respondWith(badReqResp);
+                                    }
                                 }
                             } else {
                                 const forbiddenResp = new Response("403 Forbidden", { status: 403 });
