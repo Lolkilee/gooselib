@@ -5,7 +5,10 @@
         modalStore,
         toastStore,
         ProgressRadial,
+        RadioGroup,
+        RadioItem,
     } from "@skeletonlabs/skeleton";
+    import Icon from "@iconify/svelte";
     import type { ModalSettings, ToastSettings } from "@skeletonlabs/skeleton";
     import { onDestroy } from "svelte";
     import { Command } from "@tauri-apps/api/shell";
@@ -21,11 +24,13 @@
     let instFolder = "";
     let instSize = "0 Bytes";
     let isDownloading = false;
+    let enableAdminSettings = false;
 
     $: installed = inst;
     $: installFolder = instFolder;
     $: instSize = instSize;
     $: downloading = isDownloading;
+    $: adminSettings = enableAdminSettings;
 
     let downloadCommand: Command;
 
@@ -248,10 +253,30 @@
     </Flex>
 </div>
 
-<div class="my-2 pb-8">
+<div class="my-2">
     <Flex justify="between">
         <h5 class="h5">size on disk</h5>
         <p class="text-xs text-slate-400">{instSize}</p>
+    </Flex>
+</div>
+
+<div class="my-2 pb-8">
+    <Flex justify="between">
+        <h5 class="h5">admin settings</h5>
+        <RadioGroup>
+            <RadioItem
+                bind:group={enableAdminSettings}
+                name="justify"
+                value={false}
+                ><Icon icon="radix-icons:cross-1" width="14" />
+            </RadioItem>
+            <RadioItem
+                bind:group={enableAdminSettings}
+                name="justify"
+                value={true}
+                ><Icon icon="carbon:checkmark" width="14" /></RadioItem
+            >
+        </RadioGroup>
     </Flex>
 </div>
 
