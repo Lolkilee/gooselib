@@ -37,6 +37,7 @@
     $: data.selectedVersion && loadAppInfo(data.app.name, data.selectedVersion);
     $: data.selectedVersion && checkIfInstalled();
     $: data.selectedVersion && isStartable();
+    $: data.selectedVersion && checkDirSize();
     $: fullPath = getPath(data.selectedVersion);
 
     let downloadCommand: Command;
@@ -347,13 +348,8 @@
         await checkIfInstalled();
     }, 100);
 
-    const dirSizeUpdate = setInterval(async function () {
-        await checkDirSize();
-    }, 10000);
-
     onDestroy(() => {
         clearInterval(progressUpdate);
-        clearInterval(dirSizeUpdate);
     });
 </script>
 
