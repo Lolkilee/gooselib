@@ -405,7 +405,7 @@
         <Flex justify="between">
             <h5 class="h5">executable location</h5>
             <input
-                class="input w-2/3 text-right"
+                class="input w-2/3 text-right py-2"
                 type="text"
                 placeholder="executable location"
                 bind:value={data.info.exec}
