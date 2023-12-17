@@ -45,7 +45,7 @@
                         timeout: 30,
                         responseType: ResponseType.JSON,
                         headers: reqHeaders,
-                    }
+                    },
                 );
 
                 if (response.status == 403) {
@@ -104,7 +104,7 @@
             {#each lib.apps as app}
                 <AppRailAnchor
                     href="/apps/{app.name}"
-                    selected={$page.url.pathname === "/apps/" + app.name}
+                    selected={$page.url.pathname == "/apps/" + app.name + "/"}
                     width="w-20"
                 >
                     <span class="text-center w-full text-xs">
