@@ -28,6 +28,7 @@
     let enableAdminSettings = false;
     let lastVersionUpdate: string | null = null;
     let startable = false;
+    let fullPath = "";
 
     $: installed = inst;
     $: installFolder = instFolder;
@@ -36,6 +37,7 @@
     $: data.selectedVersion && loadAppInfo(data.app.name, data.selectedVersion);
     $: data.selectedVersion && checkIfInstalled();
     $: data.selectedVersion && isStartable();
+    $: fullPath = getPath(data.selectedVersion);
 
     let downloadCommand: Command;
 
@@ -47,7 +49,7 @@
 
     function updateProgress() {
         const jString = sessionStorage.getItem(
-            data.app.name + "-" + data.selectedVersion + "-progress"
+            data.app.name + "-" + data.selectedVersion + "-progress",
         );
         if (jString != null) {
             const update: ProgressUpdate = JSON.parse(jString);
@@ -57,7 +59,7 @@
 
             if (update.status == "done") {
                 localStorage.removeItem(
-                    data.app.name + "-" + data.selectedVersion + "-progress"
+                    data.app.name + "-" + data.selectedVersion + "-progress",
                 );
             }
         } else {
@@ -97,17 +99,17 @@
 
             // Print error to debug console
             downloadCommand.on("error", (error) =>
-                console.error(`command error: "${error}"`)
+                console.error(`command error: "${error}"`),
             );
             downloadCommand.stderr.on("data", (line) =>
-                console.log(`command stderr: "${line}"`)
+                console.log(`command stderr: "${line}"`),
             );
 
             // On progress update
             downloadCommand.stdout.on("data", (line) => {
                 sessionStorage.setItem(
                     data.app.name + "-" + data.selectedVersion + "-progress",
-                    line
+                    line,
                 );
             });
 
@@ -243,7 +245,7 @@
                 {
                     responseType: ResponseType.JSON,
                     headers: reqHeaders,
-                }
+                },
             );
 
             if (res.status == 200) data.info = res.data;
@@ -252,15 +254,15 @@
         }
     }
 
-    function getPath(): string {
-        return (
+    function getPath(selVer: string): string {
+        const str =
             localStorage.getItem("install-folder") +
             "/" +
             data.app.name +
             "-" +
-            data.selectedVersion +
-            "/"
-        );
+            selVer +
+            "/";
+        return str;
     }
 
     function isStartable() {
@@ -275,8 +277,8 @@
                     "/" +
                     data.app.name +
                     "-" +
-                    data.selectedVersion
-            )
+                    data.selectedVersion,
+            ),
         );
         await invoke("start_exec", {
             path: data.info.exec.replace(
@@ -285,7 +287,7 @@
                     "/" +
                     data.app.name +
                     "-" +
-                    data.selectedVersion
+                    data.selectedVersion,
             ),
         });
     }
@@ -315,7 +317,7 @@
                         {
                             headers: reqHeaders,
                             responseType: ResponseType.Text,
-                        }
+                        },
                     );
 
                     if (res.status == 200) {
@@ -371,7 +373,7 @@
 <div class="my-2">
     <Flex justify="between">
         <h5 class="h5">path</h5>
-        <p class="text-xs text-slate-400">{getPath()}</p>
+        <p class="text-xs text-slate-400">{fullPath}</p>
     </Flex>
 </div>
 
