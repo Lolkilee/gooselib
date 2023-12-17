@@ -1,6 +1,5 @@
 <script lang="ts">
     // Settings page
-
     import {
         toastStore,
         type ToastSettings,
@@ -12,6 +11,23 @@
     import Flex from "svelte-flex";
     import { open } from "@tauri-apps/api/dialog";
     import { Command } from "@tauri-apps/api/shell";
+
+    const themes = [
+        "skeleton",
+        "wintry",
+        "modern",
+        "rocket",
+        "seafoam",
+        "vintage",
+        "sahara",
+        "hamlindigo",
+        "gold-nouveau",
+        "crimson",
+    ];
+
+    let selectedTheme = "crimson";
+
+    $: selectedTheme && changeTheme(selectedTheme);
 
     let serverAddress: string | null = "";
     let serverPassword: string | null = "";
@@ -36,6 +52,9 @@
     if (localStorage.getItem("install-folder") != null)
         installFolder = localStorage.getItem("install-folder");
 
+    const s = localStorage.getItem("saved-theme");
+    if (s != null) selectedTheme = s;
+
     function saveSettings() {
         if (serverAddress != null)
             localStorage.setItem("saved-address", serverAddress);
@@ -43,7 +62,13 @@
             localStorage.setItem("server-password", serverPassword);
         if (installFolder != null)
             localStorage.setItem("install-folder", installFolder);
+        if (selectedTheme != null)
+            localStorage.setItem("saved-theme", selectedTheme);
         toastStore.trigger(saveMsg);
+    }
+
+    function changeTheme(nTheme: string) {
+        document.body.dataset.theme = nTheme;
     }
 
     async function setInstallFolder() {
@@ -75,7 +100,7 @@
         folder: string,
         password: string,
         appName: string,
-        version: string
+        version: string,
     ) {
         let url = localStorage.getItem("saved-address");
         if (url != null) {
@@ -147,9 +172,20 @@
 
 <div class="my-2">
     <Flex justify="between">
+        <h5 class="h5 ml-4">Theme</h5>
+        <select class="select w-2/3" bind:value={selectedTheme}>
+            {#each themes as theme}
+                <option value={theme}>{theme}</option>
+            {/each}
+        </select>
+    </Flex>
+</div>
+
+<div class="my-2">
+    <Flex justify="between">
         <h5 class="h5 ml-4">Server address</h5>
         <input
-            class="input text-center w-2/3"
+            class="input text-center w-2/3 py-2"
             type="text"
             placeholder="server address"
             bind:value={serverAddress}
@@ -161,7 +197,7 @@
     <Flex justify="between">
         <h5 class="h5 ml-4">Password</h5>
         <input
-            class="input text-center w-2/3"
+            class="input text-center w-2/3 py-2"
             type="password"
             placeholder="server password"
             bind:value={serverPassword}
@@ -174,7 +210,7 @@
         <h5 class="h5 ml-4">Install folder</h5>
         <div class="w-2/3">
             <input
-                class="input text-center w-3/4"
+                class="input text-center w-3/4 py-2"
                 type="text"
                 placeholder="install folder"
                 readonly={true}
@@ -194,7 +230,7 @@
         <h5 class="h5 ml-4">Upload to server</h5>
         <div class="w-2/3">
             <input
-                class="input text-center w-3/4"
+                class="input text-center w-3/4 py-2"
                 type="text"
                 placeholder="..."
                 readonly={true}
