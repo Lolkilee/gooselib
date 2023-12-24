@@ -9,3 +9,4 @@ edition = "2021"
 actix-web = { version = "4", features = ["openssl"] }
 openssl = { version = "0.10" }
 sled = "0.34.7"
+chrono = "0.4.31"
