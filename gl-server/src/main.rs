@@ -1,3 +1,4 @@
+use actix_files as fs;
 use actix_web::{get, web, App, HttpResponse, HttpServer, Responder};
 use chrono::prelude::*;
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
@@ -8,6 +9,7 @@ mod database;
 const KEY_PATH: &str = "./creds/key.pem";
 const CERT_PATH: &str = "./creds/cert.pem";
 const DB_PATH: &str = "database";
+const APPS_PATH: &str = "/apps/";
 
 // Basic status route
 #[get("/")]
@@ -27,7 +29,7 @@ async fn main() -> std::io::Result<()> {
     // Initialize database
     let db = sled::open(DB_PATH).unwrap();
     let start_time: String = Utc::now().to_string();
-    let _ = db.insert(b"last-start", start_time.as_bytes());
+    db.insert(b"last-start", start_time.as_bytes()).unwrap();
 
     // Start the HTTP server
     HttpServer::new(move || {
@@ -35,6 +37,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::Data::new(db.clone()))
             .service(database::last_start)
             .service(status)
+            .service(fs::Files::new(APPS_PATH, "./apps").show_files_listing())
     })
     .bind_openssl("0.0.0.0:8765", builder)?
     .run()
