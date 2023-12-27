@@ -51,9 +51,10 @@ func db_get[T any](db *bolt.DB, bucket string, key string) (T, error) {
 			}
 
 			ret_val = val
+			return nil
+		} else {
+			return errors.New("database key error")
 		}
-
-		return errors.New("database key error")
 	})
 
 	return ret_val, err
@@ -72,4 +73,30 @@ func db_set[T any](db *bolt.DB, bucket string, key string, val T) error {
 		err := b.Put([]byte(key), buf.Bytes())
 		return err
 	})
+}
+
+func db_delete(db *bolt.DB, bucket string, key string) error {
+	if !db_contains_key(db, bucket, key) {
+		return errors.New("key " + key + " not found in database")
+	}
+
+	db.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(bucket))
+		b.Delete([]byte(key))
+		return nil
+	})
+
+	return nil
+}
+
+func db_contains_key(db *bolt.DB, bucket string, key string) bool {
+	check := db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(bucket))
+		if b.Get([]byte(key)) == nil {
+			return errors.New("key not found")
+		}
+		return nil
+	})
+
+	return check == nil
 }

@@ -57,6 +57,8 @@ func main() {
 	// Endpoints
 	app.Get("/", status)
 	app.Get("/login", login)
+	app.Post("/create-user", create_user_ep)
+	app.Post("/delete-user", remove_user_ep)
 
 	// Serve with TLS
 	log.Fatal(app.ListenTLS(":8765", CERT_PATH, KEY_PATH))
