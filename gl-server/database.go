@@ -15,8 +15,13 @@ import (
 	buckets
 
 users -- contains login information of all users (username, password)
+apps -- contains info on all apps (except meta data)
+meta -- app metadata (optional fields) key: <app name> + <version name>
 */
-var DB_BUCKET_NAMES = [...]string{"users"}
+var DB_APPS = "apps"
+var DB_USERS = "users"
+var DB_META = "meta"
+var DB_BUCKET_NAMES = [...]string{DB_USERS, DB_APPS, DB_META}
 
 // creates necessary buckets if they dont exist yet
 func init_db(db *bolt.DB) {
@@ -99,4 +104,18 @@ func db_contains_key(db *bolt.DB, bucket string, key string) bool {
 	})
 
 	return check == nil
+}
+
+func db_get_keys(db *bolt.DB, bucket string) []string {
+	keys := []string{}
+	db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(bucket))
+		c := b.Cursor()
+		for k, _ := c.First(); k != nil; k, _ = c.Next() {
+			keys = append(keys, string(k))
+		}
+		return nil
+	})
+
+	return keys
 }

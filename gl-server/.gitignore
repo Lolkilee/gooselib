@@ -22,4 +22,5 @@ go.work
 
 /build/
 /creds/
+/files/
 data.db

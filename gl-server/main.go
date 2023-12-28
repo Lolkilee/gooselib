@@ -57,6 +57,8 @@ func main() {
 	// Endpoints
 	app.Get("/", status)
 	app.Get("/login", login)
+	app.Get("/apps", get_apps)
+	app.Post("/upload", upload_app)
 	app.Post("/create-user", create_user_ep)
 	app.Post("/delete-user", remove_user_ep)
 
