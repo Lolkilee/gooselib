@@ -50,6 +50,11 @@ func main() {
 			panic(err)
 		}
 
+		_, err = file.Seek(0, 0)
+		if err != nil {
+			panic(err)
+		}
+
 		_, err = io.Copy(part, file)
 		if err != nil {
 			panic(err)
@@ -89,7 +94,7 @@ func main() {
 		}
 
 		fmt.Println(string(b))
-
+		os.Remove(path)
 	} else {
 		fmt.Println("Invalid argument count command format: ./gl-packager <folder> <admin password> <app name> <version name> <url>")
 		fmt.Println("Found " + fmt.Sprint(len(os.Args)) + " args")

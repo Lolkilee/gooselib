@@ -18,9 +18,10 @@ users -- contains login information of all users (username, password)
 apps -- contains info on all apps (except meta data)
 meta -- app metadata (optional fields) key: <app name> + <version name>
 */
-var DB_APPS = "apps"
-var DB_USERS = "users"
-var DB_META = "meta"
+const DB_APPS = "apps"
+const DB_USERS = "users"
+const DB_META = "meta"
+
 var DB_BUCKET_NAMES = [...]string{DB_USERS, DB_APPS, DB_META}
 
 // creates necessary buckets if they dont exist yet
