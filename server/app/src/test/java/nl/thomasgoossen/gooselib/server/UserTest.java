@@ -12,7 +12,7 @@ import nl.thomasgoossen.gooselib.server.dataclasses.User;
 class UserTest {
     @Test
     void passwordTest() {
-        // Test 10 random passwords with random lengths (between 4 and 1000)
+        // Test 10 random passwords with random lengths (between 4 and 100)
         for (int i = 0; i < 10; i++) {
             int len = ThreadLocalRandom.current().nextInt(4, 101);
             byte[] arr = new byte[len];

@@ -37,6 +37,13 @@ public class Logger {
 
         logWriter = new PrintWriter(new FileWriter(logFile, true));
         inst = this;
+        log("started a new logger instance, with log level " + this.cur_level.name);
+    }
+
+    public void close() {
+        try (logWriter) {
+            log("closing Logger instance, goodbye :)");
+        }
     }
 
     public static void err(String message) {
@@ -59,7 +66,6 @@ public class Logger {
         if (inst == null) {
             try {
                 inst = new Logger(LogLevel.DEBUG);
-                log("started a new logger instance");
             } catch (IOException ex) {
                 System.out.println(ex.getMessage());
                 return;
@@ -75,10 +81,14 @@ public class Logger {
         }
     }
 
-    public void close() {
-        try (logWriter) {
-            log("closing Logger instance, goodbye :)");
-        }
+    public static LogLevel levelFromString(String level) {
+        return switch (level.toLowerCase()) {
+            case "debug" -> LogLevel.DEBUG;
+            case "info" -> LogLevel.INFO;
+            case "warning" -> LogLevel.WARNING;
+            case "error" -> LogLevel.ERROR;
+            default -> LogLevel.INFO;
+        };
     }
 }
 
