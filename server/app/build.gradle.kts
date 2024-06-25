@@ -24,7 +24,7 @@ java {
 }
 
 application {
-    mainClass = "nl.thomasgoossen.GLServer"
+    mainClass = "nl.thomasgoossen.gooselib.server.GLServer"
 }
 
 tasks.named<Test>("test") {

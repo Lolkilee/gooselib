@@ -1,4 +1,4 @@
-package nl.thomasgoossen.dataclasses;
+package nl.thomasgoossen.gooselib.server.dataclasses;
 
 import java.io.Serializable;
 import java.security.NoSuchAlgorithmException;
@@ -8,6 +8,8 @@ import java.util.Arrays;
 
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
+
+import nl.thomasgoossen.gooselib.server.Logger;
 
 // Class holding user information
 public class User implements Serializable {
@@ -32,16 +34,16 @@ public class User implements Serializable {
             return false;
 
         byte[] inpHash = hashPwd(password);
-        return Arrays.equals(inpHash, this.hash);
+        boolean b = Arrays.equals(inpHash, this.hash);
+        Logger.dbg("password check called, result: " + b);
+        return b;
     }
 
     private byte[] hashPwd(String password) {
-
         try {
             PBEKeySpec spec = new PBEKeySpec(password.toCharArray(), salt, KEY_ITER, KEY_LEN);
             SecretKeyFactory factory = SecretKeyFactory.getInstance(HASH_ALG);
             byte[] h = factory.generateSecret(spec).getEncoded();
-            System.out.println(Arrays.toString(h));
             return h;
         } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
             System.out.println("Error hashing password");
