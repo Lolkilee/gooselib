@@ -80,11 +80,19 @@ public class Database {
         return inst.usrMap.get(username).checkPassword(password);
     }
 
+    /**
+     * Checks if username is in the usrMap
+     * @param username username
+     * @return whether or not username is in the usrMap
+     */
     public static boolean hasUser(String username) {
         Logger.dbg("check if user '" + username + "' exists");
         return inst.usrMap.containsKey(username);
     }
     
+    /**
+     * Clears the user map in the database
+     */
     public static void clearUsrMap() {
         Logger.warn("clearing user map");
         inst.usrMap.clear();
