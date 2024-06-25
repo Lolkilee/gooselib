@@ -1,4 +1,4 @@
-package nl.thomasgoossen;
+package nl.thomasgoossen.gooselib.server;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -12,6 +12,7 @@ public class Logger {
     private final PrintWriter logWriter;
 
     private final LogLevel cur_level;
+    private static Logger inst;
 
     public enum LogLevel {
         ERROR(0, "ERROR"), WARNING(1, "WARNING"), INFO(2, "INFO"), DEBUG(3, "DEBUG");
@@ -35,29 +36,48 @@ public class Logger {
         }
 
         logWriter = new PrintWriter(new FileWriter(logFile, true));
+        inst = this;
     }
 
-    public void dbg(String message) {
+    public static void err(String message) {
+        log(message, LogLevel.ERROR);
+    }
+
+    public static void warn(String message) {
+        log(message, LogLevel.WARNING);
+    }
+
+    public static void dbg(String message) {
         log(message, LogLevel.DEBUG);
     }
 
-    public void log(String message) {
+    public static void log(String message) {
         log(message, LogLevel.INFO);
     }
 
-    public void log(String message, LogLevel level) {
-        if (cur_level.value >= level.value) {
+    public static void log(String message, LogLevel level) {
+        if (inst == null) {
+            try {
+                inst = new Logger(LogLevel.DEBUG);
+                log("started a new logger instance");
+            } catch (IOException ex) {
+                System.out.println(ex.getMessage());
+                return;
+            }
+        }
+
+        if (inst.cur_level.value >= level.value) {
             String time = new SimpleDateFormat("HH:mm:ss").format(new Date());
             String msg = "[" + level.name + "][" + time + "] " + message;
             System.out.println(msg);
-            logWriter.println(msg);
-            logWriter.flush();
+            inst.logWriter.println(msg);
+            inst.logWriter.flush();
         }
     }
 
     public void close() {
         try (logWriter) {
-            log("Closing Logger instance");
+            log("closing Logger instance, goodbye :)");
         }
     }
 }
