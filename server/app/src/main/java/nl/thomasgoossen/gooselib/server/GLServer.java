@@ -14,6 +14,8 @@ public class GLServer {
     public static void main(String[] args) {
         try {
             init(args);
+            if (!Database.hasUser("admin")) 
+                Database.createUser("admin", adminPass);
             exit();
         } catch (IOException e) {
             System.out.println(e.getMessage());

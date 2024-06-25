@@ -1,5 +1,7 @@
 package nl.thomasgoossen.gooselib.server;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.concurrent.ConcurrentMap;
 
 import org.mapdb.DB;
@@ -9,7 +11,7 @@ import nl.thomasgoossen.gooselib.server.dataclasses.User;
 
 public class Database {
 
-    private final String DATA_FILE = "./db.bin";
+    private final String DATA_FILE = "db.bin";
     private final DB fileDb;
     private final ConcurrentMap<String, User> usrMap;
 
@@ -17,9 +19,10 @@ public class Database {
 
     @SuppressWarnings("unchecked")
     public Database() {
-        Logger.log("starting database");
-        fileDb = DBMaker.fileDB(DATA_FILE).make();
-        usrMap = (ConcurrentMap<String, User>) fileDb.hashMap("usr").createOrOpen();
+        Path p = Paths.get(DATA_FILE);
+        Logger.log("starting database with path: " + p.toAbsolutePath().toString());
+        fileDb = DBMaker.fileDB(p.toAbsolutePath().toString()).make();
+        usrMap = (ConcurrentMap<String, User>) fileDb.hashMap("user").createOrOpen();
         inst = this;
     }
 
