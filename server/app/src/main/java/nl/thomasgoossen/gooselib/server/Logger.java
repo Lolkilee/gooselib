@@ -74,7 +74,8 @@ public class Logger {
 
         if (inst.cur_level.value >= level.value) {
             String time = new SimpleDateFormat("HH:mm:ss").format(new Date());
-            String msg = "[" + level.name + "][" + time + "] " + message;
+            String thread = "[" + Thread.currentThread().getName() + "]";
+            String msg = "[" + level.name + "]" + thread + "[" + time + "] " + message;
             System.out.println(msg);
             inst.logWriter.println(msg);
             inst.logWriter.flush();
@@ -91,4 +92,3 @@ public class Logger {
         };
     }
 }
-

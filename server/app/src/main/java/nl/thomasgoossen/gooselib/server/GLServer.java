@@ -7,23 +7,29 @@ import nl.thomasgoossen.gooselib.server.Logger.LogLevel;
 public class GLServer {
     private static Logger logger;
     private static Database database;
+    private static NetworkingManager manager;
 
-    private static String adminPass = "admin";
+    private static String adminPass = "admin"; // default password
 
-    // input args: <admin password> <log level>
+    /*
+     * input args: <admin password> <log level> <flags>
+     * flags list:
+     * -mt networking multithreading
+     */
     public static void main(String[] args) {
         try {
             init(args);
-            if (!Database.hasUser("admin")) 
+            if (!Database.hasUser("admin"))
                 Database.createUser("admin", adminPass);
+            manager.run();
             exit();
         } catch (IOException e) {
             System.out.println(e.getMessage());
         }
     }
-    
+
     public static void init(String[] args) throws IOException {
-        if (args.length == 2) {
+        if (args.length >= 2) {
             adminPass = args[0];
             LogLevel lvl = Logger.levelFromString(args[1]);
             logger = new Logger(lvl);
@@ -31,14 +37,23 @@ public class GLServer {
         } else {
             Logger.log("invalid arguments given, defaulting to password 'admin', and loglevel DEBUG");
         }
-        
+
         database = new Database();
+        manager = new NetworkingManager(checkFlag(args, "mt"));
     }
 
     public static void exit() {
-        if (database != null)
-            database.close();
-        if (logger != null)
-            logger.close();
+        database.close();
+        manager.close();
+        logger.close();
+    }
+
+    private static boolean checkFlag(String[] args, String flag) {
+        for (String a : args) {
+            if (a.toLowerCase().replace("-", "").equals(flag))
+                return true;
+        }
+
+        return false;
     }
 }
