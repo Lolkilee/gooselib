@@ -2,6 +2,8 @@ package nl.thomasgoossen.gooselib.server;
 
 import java.io.IOException;
 
+import javax.crypto.SecretKey;
+
 import com.esotericsoftware.kryonet.Server;
 
 public class NetworkingManager {
@@ -17,9 +19,10 @@ public class NetworkingManager {
     public static final int BEGIN_PORT = 61234;
 
     // Additional threads
-    private Thread[] threads;
+    private final Thread[] threads;
+    private Server manager;
 
-    public NetworkingManager(boolean multiThreaded) throws IOException {
+    public NetworkingManager(boolean multiThreaded, SecretKey encKey) throws IOException {
         int tCount = multiThreaded ? Runtime.getRuntime().availableProcessors() : 1;
         threads = new Thread[tCount];
 
@@ -28,9 +31,8 @@ public class NetworkingManager {
             int tcpPort = BEGIN_PORT + i * 2 + 1;
             int udpPort = BEGIN_PORT + i * 2 + 2;
             s.bind(tcpPort, udpPort);
-            s.addListener(new NetworkingListener(false));
+            s.addListener(new NetworkingListener(encKey));
             threads[i] = new Thread(s);
-            threads[i].start();
 
             Logger.log("started connection thread with TCP port " + tcpPort + ", UDP port " + udpPort);
         }
@@ -39,11 +41,18 @@ public class NetworkingManager {
     /**
      * Runs the manager thread until close message received
      */
-    public void run() {
-        Logger.log("starting manager connection loop");
-        while (true) {
-            // Do stuff
+    public void run() throws IOException, InterruptedException {
+        for (Thread t : threads) {
+            t.start();
         }
+
+        manager = new Server();
+        manager.bind(BEGIN_PORT);
+        manager.addListener(new NetworkingListener());
+        Thread t = new Thread(manager);
+
+        Logger.log("starting manager connection loop");
+        t.join();
     }
 
     public void close() {
