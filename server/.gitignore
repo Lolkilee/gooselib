@@ -8,3 +8,6 @@ build
 
 latest.log
 db.bin
+
+.classpath
+.settings/

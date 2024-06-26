@@ -34,6 +34,7 @@ public class Database {
 
     /**
      * Tries to create a new user with a given password and username
+     * 
      * @return whether or not the user could be created
      */
     public static boolean createUser(String username, String password) {
@@ -50,6 +51,7 @@ public class Database {
 
     /**
      * Tries to remove username if the password is correct
+     * 
      * @param username username of user to remove
      * @param password plain-text password of user to remove
      * @return whether or not the user was removed
@@ -65,26 +67,30 @@ public class Database {
             Logger.log("removed user with name: " + username);
             return true;
         }
-        
+
         Logger.warn("tried to remove user '" + username + "', with incorrect password");
         return false;
     }
 
     /**
      * Tries to authenticate using the usrMap
+     * 
      * @param username username
      * @param password plain-text password
      * @return whether or not the authentication was successful
      */
     public static boolean auth(String username, String password) {
-        if (!inst.usrMap.containsKey(username))
+        if (!inst.usrMap.containsKey(username)) {
+            Logger.warn("tried to authenticate username '" + username + "' which doesn't exist");
             return false;
+        }
 
         return inst.usrMap.get(username).checkPassword(password);
     }
 
     /**
      * Checks if username is in the usrMap
+     * 
      * @param username username
      * @return whether or not username is in the usrMap
      */
@@ -92,7 +98,7 @@ public class Database {
         Logger.dbg("check if user '" + username + "' exists");
         return inst.usrMap.containsKey(username);
     }
-    
+
     /**
      * Clears the user map in the database
      */

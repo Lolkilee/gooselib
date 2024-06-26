@@ -46,8 +46,7 @@ public class User implements Serializable {
             byte[] h = factory.generateSecret(spec).getEncoded();
             return h;
         } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
-            System.out.println("Error hashing password");
-            e.getMessage();
+            Logger.err(e.getMessage());
         }
 
         return null;
