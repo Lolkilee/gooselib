@@ -3,6 +3,7 @@ package nl.thomasgoossen.gooselib.server;
 import java.io.IOException;
 
 import nl.thomasgoossen.gooselib.server.Logger.LogLevel;
+import nl.thomasgoossen.gooselib.util.EncryptionHelper;
 
 public class GLServer {
     private static Logger logger;
@@ -23,7 +24,7 @@ public class GLServer {
                 Database.createUser("admin", adminPass);
             manager.run();
             exit();
-        } catch (IOException e) {
+        } catch (IOException | InterruptedException e) {
             System.out.println(e.getMessage());
         }
     }
@@ -39,7 +40,8 @@ public class GLServer {
         }
 
         database = new Database();
-        manager = new NetworkingManager(checkFlag(args, "mt"));
+        manager = new NetworkingManager(checkFlag(args, "mt"),
+                    EncryptionHelper.generateKey());
     }
 
     public static void exit() {
