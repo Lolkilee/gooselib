@@ -2,6 +2,10 @@ package nl.thomasgoossen.gooselib.server;
 
 import java.io.IOException;
 
+import com.esotericsoftware.minlog.Log;
+
+import static com.esotericsoftware.minlog.Log.*;
+
 import nl.thomasgoossen.gooselib.server.Logger.LogLevel;
 import nl.thomasgoossen.gooselib.util.EncryptionHelper;
 
@@ -18,10 +22,13 @@ public class GLServer {
      * -mt networking multithreading
      */
     public static void main(String[] args) {
+        Log.set(LEVEL_ERROR);
         try {
             init(args);
             if (!Database.hasUser("admin"))
                 Database.createUser("admin", adminPass);
+            else if (!Database.auth("admin", adminPass))
+                Database.changeUserPassword("admin", adminPass);
             manager.run();
             exit();
         } catch (IOException | InterruptedException e) {

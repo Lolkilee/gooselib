@@ -32,6 +32,18 @@ public class Database {
         }
     }
 
+    /** 
+     * Creates or replaces an user
+     * 
+     * @param username username
+     * @param password plain-text password
+     */
+    public static void putUser(String username, String password) {
+        User u = new User(password);
+        inst.usrMap.put(username, u);
+        Logger.log("put user with username '" + username + "'");
+    }
+
     /**
      * Tries to create a new user with a given password and username
      * 
@@ -70,6 +82,24 @@ public class Database {
 
         Logger.warn("tried to remove user '" + username + "', with incorrect password");
         return false;
+    }
+
+    /**
+     * Changes the password for a user, does nothing if user doesn't exists
+     * 
+     * @param username username of user to change
+     * @param newPass new plain-text password
+     */
+    public static void changeUserPassword(String username, String newPass) {
+        if (!inst.usrMap.containsKey(username)) {
+            Logger.warn("tried to change password of user '" +
+                    username + "', which doesn't exist");
+            return;
+        }
+
+        User u = new User(newPass);
+        inst.usrMap.replace(username, u);
+        Logger.log("changed password of user '" + username + "'");
     }
 
     /**
