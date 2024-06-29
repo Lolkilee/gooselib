@@ -3,8 +3,7 @@ package nl.thomasgoossen.gooselib.server;
 import java.io.IOException;
 
 import com.esotericsoftware.minlog.Log;
-
-import static com.esotericsoftware.minlog.Log.*;
+import static com.esotericsoftware.minlog.Log.LEVEL_ERROR;
 
 import nl.thomasgoossen.gooselib.server.Logger.LogLevel;
 import nl.thomasgoossen.gooselib.util.EncryptionHelper;
@@ -46,7 +45,7 @@ public class GLServer {
             Logger.log("invalid arguments given, defaulting to password 'admin', and loglevel DEBUG");
         }
 
-        database = new Database();
+        database = new Database(false);
         manager = new NetworkingManager(checkFlag(args, "mt"),
                     EncryptionHelper.generateKey());
     }

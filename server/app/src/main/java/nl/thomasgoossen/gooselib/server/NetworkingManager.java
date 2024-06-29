@@ -6,7 +6,7 @@ import javax.crypto.SecretKey;
 
 import com.esotericsoftware.kryonet.Server;
 
-import nl.thomasgoossen.gooselib.util.EncryptedPacket;
+import nl.thomasgoossen.gooselib.util.KryoHelper;
 
 public class NetworkingManager {
 
@@ -37,8 +37,7 @@ public class NetworkingManager {
             int udpPort = BEGIN_PORT + i * 2 + 2;
             s.bind(tcpPort, udpPort);
             s.addListener(new NetworkingListener(encKey));
-            s.getKryo().register(EncryptedPacket.class);
-            s.getKryo().register(byte[].class);
+            KryoHelper.addRegisters(s.getKryo());
             threads[i] = new Thread(s);
 
             Logger.log("started connection thread with TCP port " + tcpPort + ", UDP port " + udpPort);
@@ -56,8 +55,7 @@ public class NetworkingManager {
         manager = new Server();
         manager.bind(BEGIN_PORT);
         manager.addListener(new NetworkingListener());
-        manager.getKryo().register(EncryptedPacket.class);
-        manager.getKryo().register(byte[].class);
+        KryoHelper.addRegisters(manager.getKryo());
         
         Logger.log("starting manager connection loop");
         manager.start();
@@ -69,6 +67,7 @@ public class NetworkingManager {
     }
 
     public void close() {
+        Logger.log("stopping manager threads");
         for (Thread t : threads) {
             t.interrupt();
         }
