@@ -6,18 +6,22 @@ import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.Listener;
 
 import nl.thomasgoossen.gooselib.shared.EncryptedPacket;
-import nl.thomasgoossen.gooselib.shared.ShutdownReq;
+import nl.thomasgoossen.gooselib.shared.messages.HandshakeReq;
+import nl.thomasgoossen.gooselib.shared.messages.HandshakeResp;
+import nl.thomasgoossen.gooselib.shared.messages.ShutdownReq;
 
 public class NetworkingListener extends Listener {
     private final boolean manager;
     private final SecretKey encKey;
 
+    // Manager constructor
     public NetworkingListener() {
         this.manager = true;
         this.encKey = null;
     }
 
-    public NetworkingListener(SecretKey encKey) {
+    // Connection thread constructor
+    public NetworkingListener(int tcp, int udp, SecretKey encKey) {
         this.manager = false;
         this.encKey = encKey;
     }
@@ -27,33 +31,45 @@ public class NetworkingListener extends Listener {
         if (object instanceof EncryptedPacket encryptedPacket) {
             if (manager) { // Manager connection
                 Logger.dbg("recv manager req with type: " + object.getClass().getSimpleName());
-                onManagerRequest(encryptedPacket);
+                onManagerRequest(connection, encryptedPacket);
             } else { // Normal connection
                 Logger.dbg("recv req with type: " + object.getClass().getSimpleName());
-                onRequest(encryptedPacket);
+                onRequest(connection, encryptedPacket);
             }
         } else {
             Logger.warn("received an object that was not an EncryptedPacket, ignoring");
         }
     }
 
-    private void onRequest(EncryptedPacket pkt) {
+    private void onRequest(Connection conn, EncryptedPacket pkt) {
         Object data = pkt.getDataObject(encKey);
         Logger.dbg("data object in req listener with type: " + data.getClass().getSimpleName());
+
     }
 
-    private void onManagerRequest(EncryptedPacket pkt) {
+    private void onManagerRequest(Connection conn, EncryptedPacket pkt) {
         // Packets to manager are not encrypted
         Object data = pkt.getDataObject(null);
         Logger.dbg("data object in manager listener with type: " + data.getClass().getSimpleName());
 
-        if (data instanceof ShutdownReq shutdown) {
-            if (Database.auth("admin", shutdown.getAdminPass())) {
-                Logger.log("recv shutdown request with correct admin password, shutting down");
-                NetworkingManager.stop();
+        switch (data) {
+            case ShutdownReq shutdown -> {
+                if (Database.auth("admin", shutdown.getAdminPass())) {
+                    Logger.log("recv shutdown request with correct admin password, shutting down");
+                    NetworkingManager.stop();
+                }
             }
-        } else {
-            Logger.warn("deserialized data was not recognized my onManagerRequest()");
+            case HandshakeReq req -> {
+                if (Database.auth(req.getUsername(), req.getPassword())) {
+                    Logger.log("handshake recv from user '" + req.getUsername() + "', handshaking...");
+                    int[] info = NetworkingManager.getNextConnection();
+                    HandshakeResp resp = new HandshakeResp(info[1], info[2],
+                            NetworkingManager.getEncryptionKey(info[0]));
+                    EncryptedPacket rPkt = new EncryptedPacket(resp, null);
+                    conn.sendTCP(rPkt);
+                }
+            }
+            default -> Logger.warn("deserialized data was not recognized by onManagerRequest()");
         }
     }
 }

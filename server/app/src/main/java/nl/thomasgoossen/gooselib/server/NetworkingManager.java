@@ -1,12 +1,14 @@
 package nl.thomasgoossen.gooselib.server;
 
 import java.io.IOException;
+import java.util.Base64;
 
 import javax.crypto.SecretKey;
 
 import com.esotericsoftware.kryonet.Server;
 
 import nl.thomasgoossen.gooselib.server.dataclasses.ConnectionThreadRecord;
+import nl.thomasgoossen.gooselib.shared.EncryptionHelper;
 import nl.thomasgoossen.gooselib.shared.KryoHelper;
 
 public class NetworkingManager {
@@ -23,7 +25,7 @@ public class NetworkingManager {
 
     private static boolean stopFlag = false;
 
-    private final ConnectionThreadRecord[] records;
+    private static ConnectionThreadRecord[] records;
     private Server manager;
 
     /**
@@ -32,7 +34,7 @@ public class NetworkingManager {
      * @param encKey SecretKey handling encryption for all connection threads
      * @throws IOException
      */
-    public NetworkingManager(boolean multiThreaded, SecretKey encKey) throws IOException {
+    public NetworkingManager(boolean multiThreaded) throws IOException {
         int tCount = multiThreaded ? Runtime.getRuntime().availableProcessors() - 1 : 1;
         records = new ConnectionThreadRecord[tCount];
 
@@ -42,9 +44,10 @@ public class NetworkingManager {
             int tcpPort = BEGIN_PORT + i * 2 + 1;
             int udpPort = BEGIN_PORT + i * 2 + 2;
             s.bind(tcpPort, udpPort);
-            s.addListener(new NetworkingListener(encKey));
+            SecretKey sessionKey = EncryptionHelper.generateKey();
+            s.addListener(new NetworkingListener(tcpPort, udpPort, sessionKey));
             KryoHelper.addRegisters(s.getKryo());
-            records[i] = new ConnectionThreadRecord(new Thread(s));
+            records[i] = new ConnectionThreadRecord(s, sessionKey, tcpPort, udpPort);
 
             Logger.log("started connection thread with TCP port " + tcpPort + ", UDP port " + udpPort);
         }
@@ -55,7 +58,7 @@ public class NetworkingManager {
      */
     public void run() throws IOException, InterruptedException {
         for (ConnectionThreadRecord r : records) {
-            r.getThread().start();
+            r.getServer().start();
         }
 
         manager = new Server();
@@ -78,8 +81,11 @@ public class NetworkingManager {
     public void close() {
         Logger.log("stopping manager threads");
         for (ConnectionThreadRecord r : records) {
-            r.getThread().interrupt();
+            r.getServer().close();
         }
+
+        manager.close();
+        stopFlag = false;
     }
 
     /**
@@ -91,5 +97,47 @@ public class NetworkingManager {
 
     public static boolean isRunning() {
         return !stopFlag;
+    }
+
+    /**
+     * @return returns the next connection thread info to be used 
+     * in an array, [index, tcp, udp]
+     */
+    public static int[] getNextConnection() {
+        int lowestCount = Integer.MAX_VALUE;
+        int i = 0;
+        int index = -1;
+        for (ConnectionThreadRecord r : records) {
+            if (r.connections < lowestCount)
+                index = i;
+            i++;
+        }
+
+        return new int[] { index, records[index].tcp, records[index].udp };
+    }
+
+    public static SecretKey getEncryptionKey(int index) {
+        return records[index].getKey();
+    }
+    
+    public static void addConnection(int index) {
+        records[index].connections += 1;
+    }
+
+    public static void removeConnection(int index) {
+        records[index].connections -= 1;
+    }
+
+    /**
+     * Debug function
+     * @return an array containing the string version of all session keys in the connection threads
+     */
+    public static String[] getSessionKeyStrings() {
+        String[] arr = new String[records.length];
+        for (int i = 0; i < records.length; i++) {
+            arr[i] = Base64.getEncoder().encodeToString(records[i].getKey().getEncoded());
+        }
+
+        return arr;
     }
 }
