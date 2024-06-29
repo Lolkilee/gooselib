@@ -13,45 +13,52 @@ import com.esotericsoftware.kryonet.Client;
 
 import nl.thomasgoossen.gooselib.util.EncryptedPacket;
 import nl.thomasgoossen.gooselib.util.EncryptionHelper;
+import nl.thomasgoossen.gooselib.util.KryoHelper;
 import nl.thomasgoossen.gooselib.util.ShutdownReq;
 
 public class NetworkingTest {
+    private final String SVR_ADMIN_PASS = "test";
+
     private Database database;
     private NetworkingManager manager;
-
-    private final String SVR_ADMIN_PASS = "test";
 
     @Test
     public void testShutdown() {
         try {
-            SecretKey key = setupServer();
+            setupServer();
             assertTrue(NetworkingManager.isRunning());
             Client c = createTestClient();
             ShutdownReq data = new ShutdownReq(SVR_ADMIN_PASS);
-            EncryptedPacket pkt = new EncryptedPacket(data, key);
+            EncryptedPacket pkt = new EncryptedPacket(data, null);
             c.sendTCP(pkt);
+            Thread.sleep(1000);
             assertFalse(NetworkingManager.isRunning());
-        } catch (IOException e) {
+
+            c.stop();
             NetworkingManager.stop();
             closeServer();
-            fail(e.getMessage());
+        } catch (IOException | InterruptedException e) {
+            NetworkingManager.stop();
+            closeServer();
+            System.out.println(e.toString());
+            fail("svr shutdown test exception");
         }
-
-        NetworkingManager.stop();
-        closeServer();
     }
 
     public Client createTestClient() throws IOException {
         Client client = new Client();
         client.start();
-        client.getKryo().register(EncryptedPacket.class);
-        client.getKryo().register(byte[].class);
+        KryoHelper.addRegisters(client.getKryo());
         client.connect(5000, "localhost", NetworkingManager.BEGIN_PORT);
         return client;
     }
 
     public SecretKey setupServer() throws IOException {
-        database = new Database();
+        if (manager != null)
+            manager.close();
+
+        System.out.println("setting up server manager");
+        database = new Database(true);
         SecretKey encKey = EncryptionHelper.generateKey();
         manager = new NetworkingManager(false, encKey);
         Database.putUser("admin", SVR_ADMIN_PASS);
@@ -67,8 +74,10 @@ public class NetworkingTest {
     }
 
     public void closeServer() {
+        System.out.println("closing server & database");
         Database.clearUsrMap();
         database.close();
-        manager.close();
+        if (manager != null)
+            manager.close();
     }
 }

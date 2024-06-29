@@ -6,10 +6,12 @@ public class ShutdownReq implements Serializable {
     private final String adminPass;
 
     public ShutdownReq(String password) {
-        this.adminPass = password;
+        this.adminPass = EncryptionHelper.encryptString(password,
+                EncryptionHelper.getPublicKey());
     }
 
     public String getAdminPass() {
-        return adminPass;
+        return EncryptionHelper.decryptString(adminPass,
+                EncryptionHelper.getPublicKey());
     }
 }

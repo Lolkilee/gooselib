@@ -18,10 +18,17 @@ public class Database {
     private static Database inst;
 
     @SuppressWarnings("unchecked")
-    public Database() {
-        Path p = Paths.get(DATA_FILE);
-        Logger.log("starting database with path: " + p.toAbsolutePath().toString());
-        fileDb = DBMaker.fileDB(p.toAbsolutePath().toString()).make();
+    public Database(boolean temp) {
+        if (!temp) {
+            Path p = Paths.get(DATA_FILE);
+            Logger.log("starting database with path: " + p.toAbsolutePath().toString());
+            fileDb = DBMaker.fileDB(p.toAbsolutePath().toString()).make();
+        }
+        else {
+            Logger.log("starting database in memory mode");
+            fileDb = DBMaker.memoryDB().make();
+        }
+
         usrMap = (ConcurrentMap<String, User>) fileDb.hashMap("user").createOrOpen();
         inst = this;
     }
