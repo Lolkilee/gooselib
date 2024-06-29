@@ -6,7 +6,7 @@ import com.esotericsoftware.minlog.Log;
 import static com.esotericsoftware.minlog.Log.LEVEL_ERROR;
 
 import nl.thomasgoossen.gooselib.server.Logger.LogLevel;
-import nl.thomasgoossen.gooselib.util.EncryptionHelper;
+import nl.thomasgoossen.gooselib.shared.EncryptionHelper;
 
 public class GLServer {
     private static Logger logger;

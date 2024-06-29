@@ -6,7 +6,8 @@ import javax.crypto.SecretKey;
 
 import com.esotericsoftware.kryonet.Server;
 
-import nl.thomasgoossen.gooselib.util.KryoHelper;
+import nl.thomasgoossen.gooselib.server.dataclasses.ConnectionThreadRecord;
+import nl.thomasgoossen.gooselib.shared.KryoHelper;
 
 public class NetworkingManager {
 
@@ -22,13 +23,18 @@ public class NetworkingManager {
 
     private static boolean stopFlag = false;
 
-    // Additional threads
-    private final Thread[] threads;
+    private final ConnectionThreadRecord[] records;
     private Server manager;
 
+    /**
+     * Manager class that handles all threads required for networking
+     * @param multiThreaded whether or not to create multiple additional connection threads
+     * @param encKey SecretKey handling encryption for all connection threads
+     * @throws IOException
+     */
     public NetworkingManager(boolean multiThreaded, SecretKey encKey) throws IOException {
         int tCount = multiThreaded ? Runtime.getRuntime().availableProcessors() - 1 : 1;
-        threads = new Thread[tCount];
+        records = new ConnectionThreadRecord[tCount];
 
         Logger.log("starting " + tCount + " connection threads");
         for (int i = 0; i < tCount; i++) {
@@ -38,7 +44,7 @@ public class NetworkingManager {
             s.bind(tcpPort, udpPort);
             s.addListener(new NetworkingListener(encKey));
             KryoHelper.addRegisters(s.getKryo());
-            threads[i] = new Thread(s);
+            records[i] = new ConnectionThreadRecord(new Thread(s));
 
             Logger.log("started connection thread with TCP port " + tcpPort + ", UDP port " + udpPort);
         }
@@ -48,8 +54,8 @@ public class NetworkingManager {
      * Runs the manager thread until close message received
      */
     public void run() throws IOException, InterruptedException {
-        for (Thread t : threads) {
-            t.start();
+        for (ConnectionThreadRecord r : records) {
+            r.getThread().start();
         }
 
         manager = new Server();
@@ -66,13 +72,19 @@ public class NetworkingManager {
         }
     }
 
+    /**
+     * Closes all connection threads by issuing interrupts
+     */
     public void close() {
         Logger.log("stopping manager threads");
-        for (Thread t : threads) {
-            t.interrupt();
+        for (ConnectionThreadRecord r : records) {
+            r.getThread().interrupt();
         }
     }
 
+    /**
+     * Sets the stopflag, which stops the loop in run()
+     */
     public static void stop() {
         stopFlag = true;
     }

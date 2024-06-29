@@ -17,6 +17,11 @@ public class Database {
 
     private static Database inst;
 
+    /**
+     * Database class
+     * @param temp if set, the database is ran in memory mode, which always starts empty,
+     * mostly used for testing purposes
+     */
     @SuppressWarnings("unchecked")
     public Database(boolean temp) {
         if (!temp) {

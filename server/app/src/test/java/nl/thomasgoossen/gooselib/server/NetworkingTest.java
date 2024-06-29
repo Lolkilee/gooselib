@@ -11,10 +11,10 @@ import org.junit.jupiter.api.Test;
 
 import com.esotericsoftware.kryonet.Client;
 
-import nl.thomasgoossen.gooselib.util.EncryptedPacket;
-import nl.thomasgoossen.gooselib.util.EncryptionHelper;
-import nl.thomasgoossen.gooselib.util.KryoHelper;
-import nl.thomasgoossen.gooselib.util.ShutdownReq;
+import nl.thomasgoossen.gooselib.shared.EncryptedPacket;
+import nl.thomasgoossen.gooselib.shared.EncryptionHelper;
+import nl.thomasgoossen.gooselib.shared.KryoHelper;
+import nl.thomasgoossen.gooselib.shared.ShutdownReq;
 
 public class NetworkingTest {
     private final String SVR_ADMIN_PASS = "test";
@@ -22,6 +22,11 @@ public class NetworkingTest {
     private Database database;
     private NetworkingManager manager;
 
+    /**
+     * Tests the basic lifecycle of a server:
+     * creates a server, client, checks if the server is running
+     * and issues a shutdown request
+     */
     @Test
     public void testShutdown() {
         try {
@@ -62,14 +67,17 @@ public class NetworkingTest {
         SecretKey encKey = EncryptionHelper.generateKey();
         manager = new NetworkingManager(false, encKey);
         Database.putUser("admin", SVR_ADMIN_PASS);
+        
         Thread t = new Thread(() -> {
             try {
                 manager.run();
             } catch (IOException | InterruptedException e) {
+                System.out.println("error in manager thread");
                 System.out.println(e.getMessage());
             }
         });
         t.start();
+        
         return encKey;
     }
 
