@@ -1,4 +1,4 @@
-package nl.thomasgoossen.gooselib.util;
+package nl.thomasgoossen.gooselib.shared;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;

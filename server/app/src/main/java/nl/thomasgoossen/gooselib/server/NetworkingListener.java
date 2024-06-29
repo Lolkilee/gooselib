@@ -5,8 +5,8 @@ import javax.crypto.SecretKey;
 import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.Listener;
 
-import nl.thomasgoossen.gooselib.util.EncryptedPacket;
-import nl.thomasgoossen.gooselib.util.ShutdownReq;
+import nl.thomasgoossen.gooselib.shared.EncryptedPacket;
+import nl.thomasgoossen.gooselib.shared.ShutdownReq;
 
 public class NetworkingListener extends Listener {
     private final boolean manager;
@@ -18,7 +18,7 @@ public class NetworkingListener extends Listener {
     }
 
     public NetworkingListener(SecretKey encKey) {
-        this.manager = true;
+        this.manager = false;
         this.encKey = encKey;
     }
 
