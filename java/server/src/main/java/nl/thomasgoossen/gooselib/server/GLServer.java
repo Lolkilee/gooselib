@@ -13,6 +13,7 @@ public class GLServer {
     private static NetworkingManager manager;
 
     private static String adminPass = "admin"; // default password
+    private static boolean hasCalledExit = false;
 
     /*
      * input args: <admin password> <log level> <flags>
@@ -59,9 +60,12 @@ public class GLServer {
     }
 
     public static void exit() {
-        database.close();
-        manager.close();
-        logger.close();
+        if (!hasCalledExit) {
+            database.close();
+            manager.close();
+            logger.close();
+            hasCalledExit = true;
+        }
     }
 
     private static boolean checkFlag(String[] args, String flag) {
