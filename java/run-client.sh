@@ -1,4 +1,4 @@
 #!/bin/bash
 
-./gradlew client:nativeCompile
-./client/build/native/nativeCompile/client
+./gradlew client:installDist
+./client/build/install/client/bin/client handshake localhost admin kaas
