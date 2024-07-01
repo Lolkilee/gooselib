@@ -1,6 +1,5 @@
 plugins {
     application
-    id("org.graalvm.buildtools.native") version "0.10.2"
 }
 
 repositories {
@@ -14,6 +13,7 @@ dependencies {
 
     implementation(libs.guava)
     implementation("com.esotericsoftware:kryonet:2.22.0-RC1")
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.0.1")
     implementation(project(":shared"))
 }
 
