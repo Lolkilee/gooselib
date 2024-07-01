@@ -16,21 +16,23 @@ public class Handshake {
 
     private static boolean receivedResp = false;
     private static HandshakeResp resp = null;
+    private static final Object lock = new Object();
 
     private static Listener listener() {
         return (new Listener() {
             @Override
             public void received(Connection connection, Object obj) {
-                System.out.println(obj.getClass().getSimpleName());
-                if (obj instanceof EncryptedPacket pkt) {
-                    Object decoded = pkt.getDataObject(null);
-                    System.out.println(decoded.getClass().getSimpleName());
-                    if (decoded instanceof HandshakeResp input) {
-                        resp = input;
+                synchronized (lock) {
+                    if (obj instanceof EncryptedPacket pkt) {
+                        Object decoded = pkt.getDataObject(null);
+                        if (decoded instanceof HandshakeResp input) {
+                            resp = input;
+                        }
                     }
-                }
 
-                receivedResp = true;
+                    receivedResp = true;
+                    lock.notifyAll();
+                }
             }
         });
     }
@@ -47,17 +49,23 @@ public class Handshake {
             EncryptedPacket pkt = new EncryptedPacket(req, null);
             c.sendTCP(pkt);
 
-            long start = System.currentTimeMillis();
-            while (!receivedResp) {
-                if ((System.currentTimeMillis() - start) < 5000) 
-                    return SerializationHelper.jsonError("handshake timeout");
+            synchronized (lock) {
+                long start = System.currentTimeMillis();
+                while (!receivedResp) {
+                    long elapsed = System.currentTimeMillis() - start;
+                    long waitTime = 5000 - elapsed;
+                    if (waitTime <= 0) {
+                        return SerializationHelper.jsonError("handshake timeout");
+                    }
+                    lock.wait(waitTime);
+                }
             }
 
             if (resp != null) {
                 return SerializationHelper.seriliazeToString(resp);
             }
 
-        } catch (IOException e) {
+        } catch (IOException | InterruptedException e) {
             return SerializationHelper.jsonError(e);
         }
 
