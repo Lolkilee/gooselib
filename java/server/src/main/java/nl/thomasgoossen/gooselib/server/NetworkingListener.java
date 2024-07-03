@@ -3,6 +3,7 @@ package nl.thomasgoossen.gooselib.server;
 import javax.crypto.SecretKey;
 
 import com.esotericsoftware.kryonet.Connection;
+import com.esotericsoftware.kryonet.FrameworkMessage.KeepAlive;
 import com.esotericsoftware.kryonet.Listener;
 
 import nl.thomasgoossen.gooselib.shared.EncryptedPacket;
@@ -36,8 +37,11 @@ public class NetworkingListener extends Listener {
                 Logger.dbg("recv req with type: " + object.getClass().getSimpleName());
                 onRequest(connection, encryptedPacket);
             }
-        } else {
+        } else if (!(object instanceof KeepAlive)){
             Logger.warn("received an object that was not an EncryptedPacket, ignoring");
+            if (object != null)
+                Logger.dbg("type of invalid object: " + object
+                        .getClass().getCanonicalName());
         }
     }
 
@@ -67,7 +71,6 @@ public class NetworkingListener extends Listener {
                             NetworkingManager.getEncryptionKey(info[0]));
                     EncryptedPacket rPkt = new EncryptedPacket(resp, null);
                     conn.sendTCP(rPkt);
-                    NetworkingManager.addConnection(info[0]);
                 }
             }
             default -> Logger.warn("deserialized data was not recognized by onManagerRequest()");

@@ -37,9 +37,10 @@ public class Handshake {
         });
     }
     
-    public static String performHandshake(String ip, String username, String password) {
+    public static HandshakeResp performHandshake(String ip, String username, String password) {
+        Client c = new Client();
+
         try {
-            Client c = new Client();
             c.start();
             c.addListener(listener());
             KryoHelper.addRegisters(c.getKryo());
@@ -55,20 +56,18 @@ public class Handshake {
                     long elapsed = System.currentTimeMillis() - start;
                     long waitTime = 5000 - elapsed;
                     if (waitTime <= 0) {
-                        return SerializationHelper.jsonError("handshake timeout");
+                        c.stop();
+                        return resp;
                     }
                     lock.wait(waitTime);
                 }
             }
 
-            if (resp != null) {
-                return SerializationHelper.seriliazeToString(resp);
-            }
-
         } catch (IOException | InterruptedException e) {
-            return SerializationHelper.jsonError(e);
+            System.out.println(e.toString());
         }
-
-        return "error";
+        
+        c.stop();
+        return resp;
     }
 }

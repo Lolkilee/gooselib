@@ -13,7 +13,9 @@ dependencies {
 
     implementation(libs.guava)
     implementation("com.esotericsoftware:kryonet:2.22.0-RC1")
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.0.1")
+    implementation("org.slf4j:slf4j-simple:2.0.10")
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.17.0")
+    implementation("io.javalin:javalin:6.1.6")
     implementation(project(":shared"))
 }
 
