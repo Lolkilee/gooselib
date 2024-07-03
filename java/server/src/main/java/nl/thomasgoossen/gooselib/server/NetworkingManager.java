@@ -110,8 +110,10 @@ public class NetworkingManager {
         int i = 0;
         int index = -1;
         for (ConnectionThreadRecord r : records) {
-            if (r.connections < lowestCount)
+            if (r.getConnections() < lowestCount) {
+                lowestCount = r.getConnections();
                 index = i;
+            }
             i++;
         }
 
@@ -120,14 +122,6 @@ public class NetworkingManager {
 
     public static SecretKey getEncryptionKey(int index) {
         return records[index].getKey();
-    }
-    
-    public static void addConnection(int index) {
-        records[index].connections += 1;
-    }
-
-    public static void removeConnection(int index) {
-        records[index].connections -= 1;
     }
 
     /**

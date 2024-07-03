@@ -14,8 +14,6 @@ public class ConnectionThreadRecord {
     public final int tcp;
     public final int udp;
 
-    public int connections = 0;
-
     public ConnectionThreadRecord(Server s, SecretKey key, int tcp, int udp) {
         this.tcp = tcp;
         this.udp = udp;
@@ -29,5 +27,9 @@ public class ConnectionThreadRecord {
 
     public Server getServer() {
         return server;
+    }
+
+    public int getConnections() {
+        return server.getConnections().length;
     }
 }
