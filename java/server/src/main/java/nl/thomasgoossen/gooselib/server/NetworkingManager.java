@@ -136,4 +136,13 @@ public class NetworkingManager {
 
         return arr;
     }
+
+    /**
+     * Debug function to print all connection counts across threads
+     */
+    public static void printConnectionCounts() {
+        for (ConnectionThreadRecord r : records) {
+            Logger.dbg("conn thread with " + r.getConnections() + " connections");
+        }
+    }
 }

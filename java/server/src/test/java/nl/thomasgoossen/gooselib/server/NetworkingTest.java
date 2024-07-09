@@ -60,7 +60,7 @@ public class NetworkingTest {
         try {
             setupServer();
             assertTrue(NetworkingManager.isRunning());
-            
+
             Client c = createTestClient();
             c.addListener(new Listener() {
                 @Override
@@ -82,11 +82,11 @@ public class NetworkingTest {
                 }
             });
             c.start();
-            
+
             HandshakeReq req = new HandshakeReq("admin", SVR_ADMIN_PASS);
             EncryptedPacket pkt = new EncryptedPacket(req, null);
             c.sendTCP(pkt);
-            
+
             Thread.sleep(1000);
             assertTrue(respRecv);
             c.stop();

@@ -8,6 +8,9 @@ build
 
 latest.log
 db.bin
+apps.bin
+
+test-upload/
 
 .classpath
 .settings/
