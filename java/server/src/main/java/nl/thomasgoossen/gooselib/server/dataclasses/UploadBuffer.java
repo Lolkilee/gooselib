@@ -1,9 +1,11 @@
 package nl.thomasgoossen.gooselib.server.dataclasses;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 
 import nl.thomasgoossen.gooselib.server.Database;
+import nl.thomasgoossen.gooselib.server.Logger;
 
 public class UploadBuffer {
     private final String name;
@@ -22,6 +24,8 @@ public class UploadBuffer {
         for (int i = 0; i < totalCount; i++) {
             toRecv.add(i);
         }
+
+        Logger.dbg("created new upload buffer with " + toRecv.size() + " expected chunks");
     }
 
     public void addToBuffer(int index, byte[] chunk) {
@@ -30,24 +34,30 @@ public class UploadBuffer {
                 Database.appendChunk(name, chunk);
                 lastAppended = index;
             } else {
+                Logger.dbg("added chunk to queue");
                 buffer.put(index, chunk);
             }
-            toRecv.remove(index);
+            toRecv.remove(toRecv.indexOf(index));
         }
     }
 
     public void pushBuffer() {
         ArrayList<Integer> toRemove = new ArrayList<>();
-        for (int i : buffer.keySet()) {
+        
+        // Make sure that the first key checked is the lowest value
+        ArrayList<Integer> keys = new ArrayList<>(buffer.keySet());
+        Collections.sort(keys);
+
+        for (int i : keys) {
             if (i == lastAppended + 1) {
                 Database.appendChunk(name, buffer.get(i));
                 toRemove.add(i);
                 lastAppended = i;
-            } else {
+            } else
                 break;
-            }
         }
-
+        
+        Logger.dbg("pushed " + toRemove.size() + " queued chunks");
         for (int k : toRemove) {
             buffer.remove(k);
         }
@@ -61,13 +71,21 @@ public class UploadBuffer {
         return toRecv.isEmpty();
     }
 
-    public int next(int window) {
-        if (lastAppended + window < toRecv.size()) {
-            return lastAppended + window;
-        } else if (!toRecv.isEmpty()) {
-            return toRecv.getFirst();
-        } else {
+    public int next(ArrayList<Integer> alreadyExpected) {
+        if (toRecv.isEmpty())
             return -1;
+
+        int next = toRecv.getFirst();
+        int i = 0;
+        while (alreadyExpected.contains(next)) {
+            i++;
+            next = toRecv.get(i);
         }
+
+        return next;
+    }
+
+    public ArrayList<Integer> getToRecv() {
+        return toRecv;
     }
 }

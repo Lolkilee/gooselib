@@ -3,6 +3,8 @@ package nl.thomasgoossen.gooselib.server.dataclasses;
 import java.io.Serializable;
 import java.util.ArrayList;
 
+import nl.thomasgoossen.gooselib.server.Logger;
+
 public class AppDefinition implements Serializable {
     public final String name;
     private String curVersion;
@@ -15,7 +17,7 @@ public class AppDefinition implements Serializable {
     }
 
     public void appendChunk(byte[] chunk) {
-        chunks.add(chunk);
+        this.chunks.add(chunk);
     }
 
     public byte[] getChunk(int i) {
@@ -32,5 +34,11 @@ public class AppDefinition implements Serializable {
 
     public String getVersion() {
         return this.curVersion;
+    }
+
+    // Should only called by tests
+    public ArrayList<byte[]> allChunks() {
+        Logger.warn("allChunks() called for AppDef " + name);
+        return chunks;
     }
 }

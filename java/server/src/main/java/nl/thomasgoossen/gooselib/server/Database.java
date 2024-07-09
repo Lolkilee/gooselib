@@ -17,10 +17,8 @@ public class Database {
     private final String APP_FILE = "apps.bin";
     private final DB fileDb;
     private final DB appDb;
-    private final ConcurrentMap<String, User> usrMap;
-    private final ConcurrentMap<String, AppDefinition> appMap;
-
-    private static Database inst;
+    private static ConcurrentMap<String, User> usrMap;
+    private static ConcurrentMap<String, AppDefinition> appMap;
 
     /**
      * Database class
@@ -47,12 +45,14 @@ public class Database {
 
         usrMap = (ConcurrentMap<String, User>) fileDb.hashMap("user").createOrOpen();
         appMap = (ConcurrentMap<String, AppDefinition>) appDb.hashMap("appDefs").createOrOpen();
-        inst = this;
     }
 
     public void close() {
         try (fileDb) {
-            Logger.log("closing database");
+            Logger.log("closing meta database");
+        }
+        try (appDb) {
+            Logger.log("closing app database");
         }
     }
 
@@ -64,7 +64,7 @@ public class Database {
      */
     public static void putUser(String username, String password) {
         User u = new User(password);
-        inst.usrMap.put(username, u);
+        usrMap.put(username, u);
         Logger.log("put user with username '" + username + "'");
     }
 
@@ -74,9 +74,9 @@ public class Database {
      * @return whether or not the user could be created
      */
     public static boolean createUser(String username, String password) {
-        if (!inst.usrMap.containsKey(username)) {
+        if (!usrMap.containsKey(username)) {
             User u = new User(password);
-            inst.usrMap.put(username, u);
+            usrMap.put(username, u);
             Logger.log("created user with username '" + username + "'");
             return true;
         }
@@ -93,13 +93,13 @@ public class Database {
      * @return whether or not the user was removed
      */
     public static boolean removeUser(String username, String password) {
-        if (!inst.usrMap.containsKey(username)) {
+        if (!usrMap.containsKey(username)) {
             Logger.warn("tried to remove user that does not exist with name '" + username + "'");
             return false;
         }
 
         if (auth(username, password)) {
-            inst.usrMap.remove(username);
+            usrMap.remove(username);
             Logger.log("removed user with name: " + username);
             return true;
         }
@@ -115,14 +115,14 @@ public class Database {
      * @param newPass new plain-text password
      */
     public static void changeUserPassword(String username, String newPass) {
-        if (!inst.usrMap.containsKey(username)) {
+        if (!usrMap.containsKey(username)) {
             Logger.warn("tried to change password of user '" +
                     username + "', which doesn't exist");
             return;
         }
 
         User u = new User(newPass);
-        inst.usrMap.replace(username, u);
+        usrMap.replace(username, u);
         Logger.log("changed password of user '" + username + "'");
     }
 
@@ -134,12 +134,12 @@ public class Database {
      * @return whether or not the authentication was successful
      */
     public static boolean auth(String username, String password) {
-        if (!inst.usrMap.containsKey(username)) {
+        if (!usrMap.containsKey(username)) {
             Logger.warn("tried to authenticate username '" + username + "' which doesn't exist");
             return false;
         }
 
-        return inst.usrMap.get(username).checkPassword(password);
+        return usrMap.get(username).checkPassword(password);
     }
 
     /**
@@ -149,7 +149,7 @@ public class Database {
      * @return whether or not username is in the usrMap
      */
     public static boolean hasUser(String username) {
-        boolean b = inst.usrMap.containsKey(username);
+        boolean b = usrMap.containsKey(username);
         Logger.dbg("check if user '" + username + "' exists, result: " + b);
         return b;
     }
@@ -159,7 +159,7 @@ public class Database {
      */
     public static void clearUsrMap() {
         Logger.warn("clearing user map");
-        inst.usrMap.clear();
+        usrMap.clear();
     }
 
     /**
@@ -168,7 +168,7 @@ public class Database {
      */
     public static String[] getApps() {
         ArrayList<String> names = new ArrayList<>();
-        for (AppDefinition a : inst.appMap.values()) {
+        for (AppDefinition a : appMap.values()) {
             names.add(a.name);
         }
         return (String[]) names.toArray();
@@ -180,8 +180,10 @@ public class Database {
      * @param chunk chunk to append
      */
     public static void appendChunk(String name, byte[] chunk) {
-        if (inst.appMap.containsKey(name)) {
-            inst.appMap.get(name).appendChunk(chunk);
+        if (appMap.containsKey(name)) {
+            AppDefinition def = appMap.get(name);
+            def.appendChunk(chunk);
+            appMap.put(name, def);
             Logger.dbg("appended a chunk of size " + chunk.length + " to " + name);
         } else {
             Logger.warn("tried to append to key '" + name + "', which is not present in DB");
@@ -194,7 +196,7 @@ public class Database {
      * @return whether ot not the app is in the database
      */
     public static boolean appExists(String name) {
-        return inst.appMap.containsKey(name);
+        return appMap.containsKey(name);
     }
 
     /**
@@ -203,6 +205,20 @@ public class Database {
      * @param version version of the app
      */
     public static void createOrClearApp(String name, String version) {
-        inst.appMap.put(name, new AppDefinition(name, version));
+        appMap.put(name, new AppDefinition(name, version));
+    }
+
+    /**
+     * Returns null if app not present
+     * @param name app name
+     * @return AppDefinition object
+     */
+    public static AppDefinition getApp(String name) {
+        if (appMap.containsKey(name))
+            return appMap.get(name);
+        else {
+            Logger.err("tried to retrieve app def that is not in database");
+            return null;
+        }
     }
 }
