@@ -1,5 +1,6 @@
 package nl.thomasgoossen.gooselib.server;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 
 import javax.crypto.SecretKey;
@@ -23,6 +24,7 @@ public class NetworkingListener extends Listener {
 
     private final int UPLOAD_WINDOW = 8;
     private final HashMap<String, UploadBuffer> uploadBuffers = new HashMap<>();
+    private final HashMap<String, ArrayList<Integer>> expectedLists = new HashMap<>();
 
     // Manager constructor
     public NetworkingListener() {
@@ -64,18 +66,26 @@ public class NetworkingListener extends Listener {
                     Logger.log("upload req recv, sending chunk upload requests");
                     Database.createOrClearApp(req.appName, req.version);
                     uploadBuffers.put(req.appName, new UploadBuffer(req.appName, req.chunkCount));
+                    expectedLists.put(req.appName, new ArrayList<>());
                     for (int i = 0; i < UPLOAD_WINDOW; i++) {
+                        expectedLists.get(req.appName).add(i);
                         conn.sendUDP(new ChunkUploadReq(req.appName, i));
                     }
                 }
             }
             case ChunkUploadResp resp -> {
-                if (Database.auth("admin", resp.getAdminPass()) && uploadBuffers.containsKey(resp.appName)) {
+                if (Database.auth("admin", resp.getAdminPass())
+                        && uploadBuffers.containsKey(resp.appName)
+                        && expectedLists.containsKey(resp.appName)) {
+                    
                     Logger.dbg("chunk recv, size " + resp.chunk.length + ", index " + resp.index);
                     UploadBuffer buff = uploadBuffers.get(resp.appName);
                     buff.addToBuffer(resp.index, resp.chunk);
                     buff.pushBuffer();
-                    int next = buff.next(UPLOAD_WINDOW);
+                    
+                    expectedLists.get(resp.appName).remove(resp.index);
+
+                    int next = buff.next(expectedLists.get(resp.appName));
                     if (next >= 0) {
                         conn.sendUDP(new ChunkUploadReq(resp.appName, next));
                     } else {
