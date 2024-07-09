@@ -1,11 +1,8 @@
-package nl.thomasgoossen.gooselib.server.dataclasses;
+package nl.thomasgoossen.gooselib.server;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-
-import nl.thomasgoossen.gooselib.server.Database;
-import nl.thomasgoossen.gooselib.server.Logger;
 
 public class UploadBuffer {
     private final String name;

@@ -8,8 +8,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.Test;
 
-import nl.thomasgoossen.gooselib.server.dataclasses.UploadBuffer;
-
 public class UploadBufferTest {
     private final int CHUNK_SIZE = 1024; // bytes per chunk
     private final int MIN_CHUNKS = 256;
