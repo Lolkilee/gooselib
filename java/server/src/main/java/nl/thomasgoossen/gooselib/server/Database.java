@@ -2,18 +2,23 @@ package nl.thomasgoossen.gooselib.server;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.concurrent.ConcurrentMap;
 
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
 
+import nl.thomasgoossen.gooselib.server.dataclasses.AppDefinition;
 import nl.thomasgoossen.gooselib.server.dataclasses.User;
 
 public class Database {
 
     private final String DATA_FILE = "db.bin";
+    private final String APP_FILE = "apps.bin";
     private final DB fileDb;
+    private final DB appDb;
     private final ConcurrentMap<String, User> usrMap;
+    private final ConcurrentMap<String, AppDefinition> appMap;
 
     private static Database inst;
 
@@ -26,15 +31,22 @@ public class Database {
     public Database(boolean temp) {
         if (!temp) {
             Path p = Paths.get(DATA_FILE);
+            Path a = Paths.get(APP_FILE);
             Logger.log("starting database with path: " + p.toAbsolutePath().toString());
             fileDb = DBMaker.fileDB(p.toAbsolutePath().toString()).make();
+            appDb = DBMaker.fileDB(a.toAbsolutePath().toString()).make();
+
+            // Load file content into disk cache
+            fileDb.getStore().fileLoad();
         }
         else {
             Logger.log("starting database in memory mode");
             fileDb = DBMaker.memoryDB().make();
+            appDb = DBMaker.memoryDB().make();
         }
 
         usrMap = (ConcurrentMap<String, User>) fileDb.hashMap("user").createOrOpen();
+        appMap = (ConcurrentMap<String, AppDefinition>) appDb.hashMap("appDefs").createOrOpen();
         inst = this;
     }
 
@@ -148,5 +160,49 @@ public class Database {
     public static void clearUsrMap() {
         Logger.warn("clearing user map");
         inst.usrMap.clear();
+    }
+
+    /**
+     * Gets all appnames in database
+     * @return string arr containing app names
+     */
+    public static String[] getApps() {
+        ArrayList<String> names = new ArrayList<>();
+        for (AppDefinition a : inst.appMap.values()) {
+            names.add(a.name);
+        }
+        return (String[]) names.toArray();
+    }
+
+    /**
+     * Appends a chunk to an app definition if present in DB
+     * @param name name of app definition
+     * @param chunk chunk to append
+     */
+    public static void appendChunk(String name, byte[] chunk) {
+        if (inst.appMap.containsKey(name)) {
+            inst.appMap.get(name).appendChunk(chunk);
+            Logger.dbg("appended a chunk of size " + chunk.length + " to " + name);
+        } else {
+            Logger.warn("tried to append to key '" + name + "', which is not present in DB");
+        }
+    }
+
+    /**
+     * Checks if an app exists in database
+     * @param name app name
+     * @return whether ot not the app is in the database
+     */
+    public static boolean appExists(String name) {
+        return inst.appMap.containsKey(name);
+    }
+
+    /**
+     * Puts a new app in the appdefinition database
+     * @param name name of the app
+     * @param version version of the app
+     */
+    public static void createOrClearApp(String name, String version) {
+        inst.appMap.put(name, new AppDefinition(name, version));
     }
 }

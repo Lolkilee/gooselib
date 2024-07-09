@@ -1,19 +1,28 @@
 package nl.thomasgoossen.gooselib.server;
 
+import java.util.HashMap;
+
 import javax.crypto.SecretKey;
 
 import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.FrameworkMessage.KeepAlive;
 import com.esotericsoftware.kryonet.Listener;
 
+import nl.thomasgoossen.gooselib.server.dataclasses.UploadBuffer;
 import nl.thomasgoossen.gooselib.shared.EncryptedPacket;
+import nl.thomasgoossen.gooselib.shared.messages.ChunkUploadReq;
+import nl.thomasgoossen.gooselib.shared.messages.ChunkUploadResp;
 import nl.thomasgoossen.gooselib.shared.messages.HandshakeReq;
 import nl.thomasgoossen.gooselib.shared.messages.HandshakeResp;
 import nl.thomasgoossen.gooselib.shared.messages.ShutdownReq;
+import nl.thomasgoossen.gooselib.shared.messages.UploadReq;
 
 public class NetworkingListener extends Listener {
     private final boolean manager;
     private final SecretKey encKey;
+
+    private final int UPLOAD_WINDOW = 8;
+    private final HashMap<String, UploadBuffer> uploadBuffers = new HashMap<>();
 
     // Manager constructor
     public NetworkingListener() {
@@ -48,7 +57,35 @@ public class NetworkingListener extends Listener {
     private void onRequest(Connection conn, EncryptedPacket pkt) {
         Object data = pkt.getDataObject(encKey);
         Logger.dbg("data object in req listener with type: " + data.getClass().getSimpleName());
-
+    
+        switch (data) {
+            case UploadReq req -> {
+                if (Database.auth("admin", req.getAdminPass())) {
+                    Logger.log("upload req recv, sending chunk upload requests");
+                    Database.createOrClearApp(req.appName, req.version);
+                    uploadBuffers.put(req.appName, new UploadBuffer(req.appName, req.chunkCount));
+                    for (int i = 0; i < UPLOAD_WINDOW; i++) {
+                        conn.sendUDP(new ChunkUploadReq(req.appName, i));
+                    }
+                }
+            }
+            case ChunkUploadResp resp -> {
+                if (Database.auth("admin", resp.getAdminPass()) && uploadBuffers.containsKey(resp.appName)) {
+                    Logger.dbg("chunk recv, size " + resp.chunk.length + ", index " + resp.index);
+                    UploadBuffer buff = uploadBuffers.get(resp.appName);
+                    buff.addToBuffer(resp.index, resp.chunk);
+                    buff.pushBuffer();
+                    int next = buff.next(UPLOAD_WINDOW);
+                    if (next >= 0) {
+                        conn.sendUDP(new ChunkUploadReq(resp.appName, next));
+                    } else {
+                        Logger.log("upload buffer completed, cleaning up...");
+                        uploadBuffers.remove(resp.appName);
+                    }
+                }
+            }
+            default -> Logger.warn("deserialized data was not recognized by onRequest()");
+        }
     }
 
     private void onManagerRequest(Connection conn, EncryptedPacket pkt) {
@@ -71,6 +108,7 @@ public class NetworkingListener extends Listener {
                             NetworkingManager.getEncryptionKey(info[0]));
                     EncryptedPacket rPkt = new EncryptedPacket(resp, null);
                     conn.sendTCP(rPkt);
+                    //NetworkingManager.printConnectionCounts();
                 }
             }
             default -> Logger.warn("deserialized data was not recognized by onManagerRequest()");

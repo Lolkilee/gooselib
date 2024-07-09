@@ -1,5 +1,8 @@
 package nl.thomasgoossen.gooselib.client;
 
+import java.nio.file.Files;
+import java.nio.file.Paths;
+
 import com.esotericsoftware.minlog.Log;
 import static com.esotericsoftware.minlog.Log.LEVEL_ERROR;
 
@@ -9,6 +12,7 @@ import nl.thomasgoossen.gooselib.shared.messages.HandshakeResp;
 public class GLClient {
 
     private static final int PORT = 7123;
+    private static final String UPLOAD_FILE = "temp.tar.gz";
 
     private static String username;
     private static String password;
@@ -23,6 +27,7 @@ public class GLClient {
         app = setUsernameHandler(app);
         app = setPasswordHandler(app);
         app = handshakeHandler(app);
+        app = uploadHandler(app);
         app.start(PORT);
 
         Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -59,10 +64,30 @@ public class GLClient {
 
     private static Javalin handshakeHandler(Javalin app) {
         return app.post("/handshake/{ip}", ctx -> {
+            if (connection != null) {
+                connection.stop();
+            }
+
             String ip = ctx.pathParam("ip");
             HandshakeResp resp = Handshake.performHandshake(ip, username, password);
             connection = new ConnectionInstance(ip, resp);
             ctx.json(resp);
+        });
+    }
+
+    // Path should be formatted between [] brackets, and ! instead of /
+    private static Javalin uploadHandler(Javalin app) {
+        return app.post("/upload/{path}", ctx -> {
+            if (connection != null) {
+                String path = ctx.pathParam("path");
+                path = path.replace("[", "");
+                path = path.replace("]", "");
+                path = path.replace("!", "/");
+                System.out.println(Paths.get(path).toAbsolutePath());
+                ctx.result("path exists: " + Files.isDirectory(Paths.get(path)));
+            } else {
+                ctx.result("connection not initialized");
+            }
         });
     }
 }
