@@ -9,6 +9,7 @@ build
 latest.log
 db.bin
 apps.bin
+temp.tar.gz
 
 test-upload/
 

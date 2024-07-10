@@ -15,6 +15,7 @@ import nl.thomasgoossen.gooselib.shared.messages.ChunkUploadResp;
 import nl.thomasgoossen.gooselib.shared.messages.HandshakeReq;
 import nl.thomasgoossen.gooselib.shared.messages.HandshakeResp;
 import nl.thomasgoossen.gooselib.shared.messages.ShutdownReq;
+import nl.thomasgoossen.gooselib.shared.messages.UploadCompleteMsg;
 import nl.thomasgoossen.gooselib.shared.messages.UploadReq;
 
 public class NetworkingListener extends Listener {
@@ -66,9 +67,10 @@ public class NetworkingListener extends Listener {
                     Database.createOrClearApp(req.appName, req.version);
                     uploadBuffers.put(req.appName, new UploadBuffer(req.appName, req.chunkCount));
                     expectedLists.put(req.appName, new ArrayList<>());
-                    for (int i = 0; i < UPLOAD_WINDOW; i++) {
+                    for (int i = 0; i < UPLOAD_WINDOW && i < req.chunkCount; i++) {
                         expectedLists.get(req.appName).add(i);
-                        conn.sendUDP(new ChunkUploadReq(req.appName, i));
+                        EncryptedPacket p = new EncryptedPacket(new ChunkUploadReq(req.appName, i), encKey);
+                        conn.sendUDP(p);
                     }
                 }
             }
@@ -82,14 +84,20 @@ public class NetworkingListener extends Listener {
                     buff.addToBuffer(resp.index, resp.chunk);
                     buff.pushBuffer();
                     
-                    expectedLists.get(resp.appName).remove(resp.index);
+                    ArrayList<Integer> expected = expectedLists.get(resp.appName);
+                    expected.remove(resp.index);
+                    expectedLists.put(resp.appName, expected);
 
                     int next = buff.next(expectedLists.get(resp.appName));
                     if (next >= 0) {
-                        conn.sendUDP(new ChunkUploadReq(resp.appName, next));
+                        EncryptedPacket p = new EncryptedPacket(new ChunkUploadReq(resp.appName, next), encKey);
+                        conn.sendUDP(p);
                     } else {
                         Logger.log("upload buffer completed, cleaning up...");
                         uploadBuffers.remove(resp.appName);
+                        UploadCompleteMsg msg = new UploadCompleteMsg(buff.totalCount);
+                        EncryptedPacket p = new EncryptedPacket(msg, encKey);
+                        conn.sendTCP(p);
                     }
                 }
             }
@@ -117,7 +125,6 @@ public class NetworkingListener extends Listener {
                             NetworkingManager.getEncryptionKey(info[0]));
                     EncryptedPacket rPkt = new EncryptedPacket(resp, null);
                     conn.sendTCP(rPkt);
-                    //NetworkingManager.printConnectionCounts();
                 }
             }
             default -> Logger.warn("deserialized data was not recognized by onManagerRequest()");
