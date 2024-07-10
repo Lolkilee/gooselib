@@ -10,9 +10,7 @@ import io.javalin.Javalin;
 import nl.thomasgoossen.gooselib.shared.messages.HandshakeResp;
 
 public class GLClient {
-
     private static final int PORT = 7123;
-    private static final String UPLOAD_FILE = "temp.tar.gz";
 
     private static String username;
     private static String password;
@@ -28,6 +26,7 @@ public class GLClient {
         app = setPasswordHandler(app);
         app = handshakeHandler(app);
         app = uploadHandler(app);
+        app = uploadStatusHandler(app);
         app.start(PORT);
 
         Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -77,17 +76,55 @@ public class GLClient {
 
     // Path should be formatted between [] brackets, and ! instead of /
     private static Javalin uploadHandler(Javalin app) {
-        return app.post("/upload/{path}", ctx -> {
+        return app.post("/upload/{path}/{name}/{version}", ctx -> {
             if (connection != null) {
                 String path = ctx.pathParam("path");
+                String name = ctx.pathParam("name");
+                String version = ctx.pathParam("version");
+
                 path = path.replace("[", "");
                 path = path.replace("]", "");
                 path = path.replace("!", "/");
-                System.out.println(Paths.get(path).toAbsolutePath());
-                ctx.result("path exists: " + Files.isDirectory(Paths.get(path)));
+                System.out.println("starting upload with vars:");
+                System.out.println("path: " + Paths.get(path).toAbsolutePath());
+                System.out.println("name: " + name);
+                System.out.println("version: " + version);
+
+                if (Files.isDirectory(Paths.get(path))) {
+                    ctx.result("starting upload");
+                    Upload.upload(password, path, name, version);
+                } else {
+                    ctx.result("path is not a folder");
+                }
             } else {
                 ctx.result("connection not initialized");
             }
         });
+    }
+
+    private static Javalin uploadStatusHandler(Javalin app) {
+        return app.get("/upload-status", ctx -> {
+            ctx.result(Upload.getStatus());
+        });
+    }
+    
+    public static void sendPacketTCP(Object data) {
+        if (connection != null) {
+            connection.sendPacketTCP(data);
+        }
+    }
+
+    public static void sendPacketUDP(Object data) {
+        if (connection != null) {
+            connection.sendPacketUDP(data);
+        }
+    }
+
+    public static String getPassword() {
+        return password;
+    }
+
+    public static String getUsername() {
+        return username;
     }
 }

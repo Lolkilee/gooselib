@@ -4,6 +4,7 @@ import java.io.Serializable;
 
 import nl.thomasgoossen.gooselib.shared.EncryptionHelper;
 
+// Sent from client to server
 public class ChunkUploadResp implements Serializable {
     private final String adminPass;
     public final String appName;

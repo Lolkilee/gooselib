@@ -166,12 +166,20 @@ public class Database {
      * Gets all appnames in database
      * @return string arr containing app names
      */
-    public static String[] getApps() {
+    public static ArrayList<String> getApps() {
         ArrayList<String> names = new ArrayList<>();
         for (AppDefinition a : appMap.values()) {
             names.add(a.name);
         }
-        return (String[]) names.toArray();
+        return names;
+    }
+
+    /**
+     * Counts the apps in the app database
+     * @return amount of apps
+     */
+    public static int getAppCount() {
+        return appMap.values().size();
     }
 
     /**

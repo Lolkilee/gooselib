@@ -39,24 +39,26 @@ public class UploadBuffer {
     }
 
     public void pushBuffer() {
-        ArrayList<Integer> toRemove = new ArrayList<>();
-        
-        // Make sure that the first key checked is the lowest value
-        ArrayList<Integer> keys = new ArrayList<>(buffer.keySet());
-        Collections.sort(keys);
+        if (!buffer.keySet().isEmpty()) {
+            ArrayList<Integer> toRemove = new ArrayList<>();
 
-        for (int i : keys) {
-            if (i == lastAppended + 1) {
-                Database.appendChunk(name, buffer.get(i));
-                toRemove.add(i);
-                lastAppended = i;
-            } else
-                break;
-        }
-        
-        Logger.dbg("pushed " + toRemove.size() + " queued chunks");
-        for (int k : toRemove) {
-            buffer.remove(k);
+            // Make sure that the first key checked is the lowest value
+            ArrayList<Integer> keys = new ArrayList<>(buffer.keySet());
+            Collections.sort(keys);
+
+            for (int i : keys) {
+                if (i == lastAppended + 1) {
+                    Database.appendChunk(name, buffer.get(i));
+                    toRemove.add(i);
+                    lastAppended = i;
+                } else
+                    break;
+            }
+
+            Logger.dbg("pushed " + toRemove.size() + " queued chunks");
+            for (int k : toRemove) {
+                buffer.remove(k);
+            }
         }
     }
 

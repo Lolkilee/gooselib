@@ -16,6 +16,7 @@ dependencies {
     implementation("org.slf4j:slf4j-simple:2.0.10")
     implementation("com.fasterxml.jackson.core:jackson-databind:2.17.0")
     implementation("io.javalin:javalin:6.1.6")
+    implementation("org.apache.commons:commons-compress:1.21")
     implementation(project(":shared"))
 }
 

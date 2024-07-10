@@ -57,6 +57,10 @@ public class GLServer {
 
         database = new Database(false);
         manager = new NetworkingManager(checkFlag(args, "mt"));
+
+        Logger.log("init complete, currently "
+                + Database.getAppCount()
+                + " app(s) in database");
     }
 
     public static void exit() {
