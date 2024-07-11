@@ -7,10 +7,15 @@ import com.esotericsoftware.minlog.Log;
 import static com.esotericsoftware.minlog.Log.LEVEL_ERROR;
 
 import io.javalin.Javalin;
+import nl.thomasgoossen.gooselib.shared.AppMetaData;
 import nl.thomasgoossen.gooselib.shared.messages.HandshakeResp;
+import nl.thomasgoossen.gooselib.shared.messages.LibInfoReq;
 
 public class GLClient {
     private static final int PORT = 7123;
+
+    private static AppMetaData[] metaData = null;
+    private static volatile boolean metaSignal = false;
 
     private static String username;
     private static String password;
@@ -27,6 +32,7 @@ public class GLClient {
         app = handshakeHandler(app);
         app = uploadHandler(app);
         app = uploadStatusHandler(app);
+        app = metaDataHandler(app);
         app.start(PORT);
 
         Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -107,6 +113,23 @@ public class GLClient {
             ctx.result(Upload.getStatus());
         });
     }
+
+    private static Javalin metaDataHandler(Javalin app) {
+        return app.get("/meta", ctx -> {
+            if (connection != null) {
+                LibInfoReq req = new LibInfoReq(username, password);
+                connection.sendPacketTCP(req);
+
+                long startTime = System.currentTimeMillis();
+                while (!metaSignal) {
+                    if (System.currentTimeMillis() - startTime > 5000)
+                        break;
+                }
+            }
+
+            ctx.json(metaData);
+        });
+    }
     
     public static void sendPacketTCP(Object data) {
         if (connection != null) {
@@ -126,5 +149,13 @@ public class GLClient {
 
     public static String getUsername() {
         return username;
+    }
+
+    public static void setMetaSignal() {
+        metaSignal = true;
+    }
+
+    public static void setMetaData(AppMetaData[] metaData) {
+        GLClient.metaData = metaData;
     }
 }

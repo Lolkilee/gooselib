@@ -10,6 +10,7 @@ import org.mapdb.DBMaker;
 
 import nl.thomasgoossen.gooselib.server.dataclasses.AppDefinition;
 import nl.thomasgoossen.gooselib.server.dataclasses.User;
+import nl.thomasgoossen.gooselib.shared.AppMetaData;
 
 public class Database {
 
@@ -228,5 +229,17 @@ public class Database {
             Logger.err("tried to retrieve app def that is not in database");
             return null;
         }
+    }
+
+    /**
+     * Returns a list containg all meta datas of all apps
+     * @return list with meta datas
+     */
+    public static ArrayList<AppMetaData> getAppMetas() {
+        ArrayList<AppMetaData> arr = new ArrayList<>();
+        for (AppDefinition a : appMap.values()) {
+            arr.add(a.getMetaData());
+        }
+        return arr;
     }
 }

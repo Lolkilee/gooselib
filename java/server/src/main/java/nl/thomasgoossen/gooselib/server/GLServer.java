@@ -18,7 +18,8 @@ public class GLServer {
     /*
      * input args: <admin password> <log level> <flags>
      * flags list:
-     * -mt networking multithreading
+     * -mt use networking multithreading
+     * -np start database without persistence (changes are not saved)
      */
     public static void main(String[] args) {
         Log.set(LEVEL_ERROR);
@@ -55,7 +56,7 @@ public class GLServer {
             Logger.log("invalid arguments given, defaulting to password 'admin', and loglevel DEBUG");
         }
 
-        database = new Database(false);
+        database = new Database(checkFlag(args, "np"));
         manager = new NetworkingManager(checkFlag(args, "mt"));
 
         Logger.log("init complete, currently "
