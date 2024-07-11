@@ -28,7 +28,6 @@ public class NetworkingListener extends Listener {
     private final SecretKey encKey;
 
     // Initial upload reqs to be sent
-    private final int UPLOAD_WINDOW = 1;
     private final HashMap<String, UploadBuffer> uploadBuffers = new HashMap<>();
     private final HashMap<String, ArrayList<Integer>> expectedLists = new HashMap<>();
 

@@ -18,7 +18,6 @@ import nl.thomasgoossen.gooselib.shared.AppMetaData;
 public class Database {
 
     private final String DATA_FILE = "db.bin";
-    private final String APP_FILE = "apps.bin";
     private final DB fileDb;
     private static ConcurrentMap<String, User> usrMap;
     private static ConcurrentMap<String, AppDefinition> appMap;
@@ -34,7 +33,6 @@ public class Database {
         this.temp = temp;
         if (!temp) {
             Path p = Paths.get(DATA_FILE);
-            Path a = Paths.get(APP_FILE);
             Logger.log("starting database with path: " + p.toAbsolutePath().toString());
             fileDb = DBMaker.fileDB(p.toAbsolutePath().toString()).make();
 
