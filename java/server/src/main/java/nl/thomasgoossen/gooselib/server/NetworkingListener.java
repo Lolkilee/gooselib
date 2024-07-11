@@ -28,7 +28,7 @@ public class NetworkingListener extends Listener {
     private final SecretKey encKey;
 
     // Initial upload reqs to be sent
-    private final int UPLOAD_WINDOW = 8;
+    private final int UPLOAD_WINDOW = 1;
     private final HashMap<String, UploadBuffer> uploadBuffers = new HashMap<>();
     private final HashMap<String, ArrayList<Integer>> expectedLists = new HashMap<>();
 
@@ -80,11 +80,9 @@ public class NetworkingListener extends Listener {
                     Database.createOrClearApp(req.appName, req.version);
                     uploadBuffers.put(req.appName, new UploadBuffer(req.appName, req.chunkCount));
                     expectedLists.put(req.appName, new ArrayList<>());
-                    for (int i = 0; i < UPLOAD_WINDOW && i < req.chunkCount; i++) {
-                        expectedLists.get(req.appName).add(i);
-                        EncryptedPacket p = new EncryptedPacket(new ChunkUploadReq(req.appName, i), encKey);
-                        conn.sendUDP(p);
-                    }
+                    expectedLists.get(req.appName).add(0);
+                    EncryptedPacket p = new EncryptedPacket(new ChunkUploadReq(req.appName, 0), encKey);
+                    conn.sendUDP(p);
                 }
             }
             case ChunkUploadResp resp -> {
@@ -98,7 +96,8 @@ public class NetworkingListener extends Listener {
                     buff.pushBuffer();
                     
                     ArrayList<Integer> expected = expectedLists.get(resp.appName);
-                    expected.remove(resp.index);
+                    if (expected.contains(resp.index))
+                        expected.remove(expected.indexOf(resp.index));
                     expectedLists.put(resp.appName, expected);
 
                     int next = buff.next(expectedLists.get(resp.appName));

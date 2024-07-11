@@ -1,6 +1,7 @@
 package nl.thomasgoossen.gooselib.client;
 
 import java.io.BufferedInputStream;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -22,7 +23,6 @@ import nl.thomasgoossen.gooselib.shared.messages.ChunkReq;
 
 public class Download {
     private final static String DL_FILE = "./temp.tar.gz";
-    private final static int WINDOW_SIZE = 8;
 
     private final static HashMap<String, Download> instances = new HashMap<>();
 
@@ -52,10 +52,8 @@ public class Download {
         Download d = this;
         instances.put(meta.name, d);
 
-        for (int i = 0; i < WINDOW_SIZE && i < meta.chunkCount; i++) {
-            ChunkReq req = new ChunkReq(meta.name, i);
-            GLClient.sendPacketUDP(req);
-        }
+        ChunkReq req = new ChunkReq(meta.name, 0);
+        GLClient.sendPacketUDP(req);
 
         tThread = new TimeoutThread(appName);
     }
@@ -97,6 +95,8 @@ public class Download {
                     System.out.println("finished download for " + appName);
                     tThread.stop();
                     instances.remove(appName);
+                    File f = new File(path);
+                    f.delete();
                 } catch (IOException e) {
                     System.out.println(e.getMessage());
                 }
