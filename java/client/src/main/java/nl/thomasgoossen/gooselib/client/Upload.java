@@ -17,7 +17,7 @@ import nl.thomasgoossen.gooselib.shared.messages.UploadReq;
 
 public class Upload {
     private final static String UPLOAD_FILE = "./temp.tar.gz";
-    public final static int CHUNK_SIZE = 2048; //bytes per chunk
+    public final static int CHUNK_SIZE = 1024; //bytes per chunk
     
     private static String curUploadName = "undefined";
     private static String status = "idle";
