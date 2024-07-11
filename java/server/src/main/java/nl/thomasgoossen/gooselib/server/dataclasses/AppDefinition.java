@@ -4,6 +4,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 
 import nl.thomasgoossen.gooselib.server.Logger;
+import nl.thomasgoossen.gooselib.shared.AppMetaData;
 
 public class AppDefinition implements Serializable {
     public final String name;
@@ -40,5 +41,9 @@ public class AppDefinition implements Serializable {
     public ArrayList<byte[]> allChunks() {
         Logger.warn("allChunks() called for AppDef " + name);
         return chunks;
+    }
+
+    public AppMetaData getMetaData() {
+        return new AppMetaData(this.name, this.curVersion, this.chunks.size());
     }
 }

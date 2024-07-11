@@ -9,11 +9,14 @@ import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.FrameworkMessage.KeepAlive;
 import com.esotericsoftware.kryonet.Listener;
 
+import nl.thomasgoossen.gooselib.shared.AppMetaData;
 import nl.thomasgoossen.gooselib.shared.EncryptedPacket;
 import nl.thomasgoossen.gooselib.shared.messages.ChunkUploadReq;
 import nl.thomasgoossen.gooselib.shared.messages.ChunkUploadResp;
 import nl.thomasgoossen.gooselib.shared.messages.HandshakeReq;
 import nl.thomasgoossen.gooselib.shared.messages.HandshakeResp;
+import nl.thomasgoossen.gooselib.shared.messages.LibInfoReq;
+import nl.thomasgoossen.gooselib.shared.messages.LibInfoResp;
 import nl.thomasgoossen.gooselib.shared.messages.ShutdownReq;
 import nl.thomasgoossen.gooselib.shared.messages.UploadCompleteMsg;
 import nl.thomasgoossen.gooselib.shared.messages.UploadReq;
@@ -22,6 +25,7 @@ public class NetworkingListener extends Listener {
     private final boolean manager;
     private final SecretKey encKey;
 
+    // Initial upload reqs to be sent
     private final int UPLOAD_WINDOW = 8;
     private final HashMap<String, UploadBuffer> uploadBuffers = new HashMap<>();
     private final HashMap<String, ArrayList<Integer>> expectedLists = new HashMap<>();
@@ -99,6 +103,15 @@ public class NetworkingListener extends Listener {
                         EncryptedPacket p = new EncryptedPacket(msg, encKey);
                         conn.sendTCP(p);
                     }
+                }
+            }
+            case LibInfoReq req -> {
+                if (Database.auth(req.username, req.password)) {
+                    Logger.dbg("sending library info response");
+                    ArrayList<AppMetaData> appData = Database.getAppMetas();
+                    LibInfoResp resp = new LibInfoResp(appData);
+                    EncryptedPacket p = new EncryptedPacket(resp, encKey);
+                    conn.sendTCP(p);
                 }
             }
             default -> Logger.warn("deserialized data was not recognized by onRequest()");

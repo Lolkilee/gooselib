@@ -13,6 +13,7 @@ import nl.thomasgoossen.gooselib.shared.KryoHelper;
 import nl.thomasgoossen.gooselib.shared.messages.ChunkUploadReq;
 import nl.thomasgoossen.gooselib.shared.messages.ChunkUploadResp;
 import nl.thomasgoossen.gooselib.shared.messages.HandshakeResp;
+import nl.thomasgoossen.gooselib.shared.messages.LibInfoResp;
 import nl.thomasgoossen.gooselib.shared.messages.UploadCompleteMsg;
 
 public class ConnectionInstance {
@@ -20,32 +21,40 @@ public class ConnectionInstance {
     private final Client client;
     private final SecretKey key;
 
+    private void dataSwitch(Object data) {
+        switch (data) {
+            case ChunkUploadReq req -> {
+                if (req.appName.equals(Upload.getCurUploadName())) {
+                    byte[] chunk = Upload.getChunk(req.index);
+                    ChunkUploadResp resp = new ChunkUploadResp(
+                            GLClient.getPassword(),
+                            Upload.getCurUploadName(),
+                            req.index, chunk);
+                    GLClient.sendPacketUDP(resp);
+                }
+            }
+            case UploadCompleteMsg msg -> {
+                System.out.println("upload complete, server wrote "
+                        + msg.chunksWritten + " chunks");
+                Upload.done();
+            }
+            case LibInfoResp resp -> {
+                GLClient.setMetaData(resp.apps);
+                GLClient.setMetaSignal();
+            }
+            default -> {
+                System.out.println("invalid data object");
+            }
+        }
+    }
+
     private Listener listener() {
         return new Listener() {
             @Override
             public void received(Connection conn, Object obj) {
                 if (obj instanceof EncryptedPacket p) {
                     Object data = p.getDataObject(key);
-                    switch (data) {
-                        case ChunkUploadReq req -> {
-                            if (req.appName.equals(Upload.getCurUploadName())) {
-                                byte[] chunk = Upload.getChunk(req.index);
-                                ChunkUploadResp resp = new ChunkUploadResp(
-                                        GLClient.getPassword(),
-                                        Upload.getCurUploadName(),
-                                        req.index, chunk);
-                                GLClient.sendPacketUDP(resp);
-                            }
-                        }
-                        case UploadCompleteMsg msg -> {
-                            System.out.println("upload complete, server wrote "
-                                    + msg.chunksWritten + " chunks");
-                            Upload.done();
-                        }
-                        default -> {
-                            System.out.println("invalid data object");
-                        }
-                    }
+                    dataSwitch(data);
                 }
             }
         };
