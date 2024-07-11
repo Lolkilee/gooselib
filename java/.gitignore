@@ -11,6 +11,7 @@ db.bin
 apps.bin
 temp.tar.gz
 
+app-chunks/
 test-upload/
 */download-test/
 download-test/

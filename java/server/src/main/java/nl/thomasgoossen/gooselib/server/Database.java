@@ -1,8 +1,11 @@
 package nl.thomasgoossen.gooselib.server;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 
 import org.mapdb.DB;
@@ -17,9 +20,9 @@ public class Database {
     private final String DATA_FILE = "db.bin";
     private final String APP_FILE = "apps.bin";
     private final DB fileDb;
-    private final DB appDb;
     private static ConcurrentMap<String, User> usrMap;
     private static ConcurrentMap<String, AppDefinition> appMap;
+    private final boolean temp;
 
     /**
      * Database class
@@ -28,12 +31,12 @@ public class Database {
      */
     @SuppressWarnings("unchecked")
     public Database(boolean temp) {
+        this.temp = temp;
         if (!temp) {
             Path p = Paths.get(DATA_FILE);
             Path a = Paths.get(APP_FILE);
             Logger.log("starting database with path: " + p.toAbsolutePath().toString());
             fileDb = DBMaker.fileDB(p.toAbsolutePath().toString()).make();
-            appDb = DBMaker.fileDB(a.toAbsolutePath().toString()).make();
 
             // Load file content into disk cache
             fileDb.getStore().fileLoad();
@@ -41,20 +44,46 @@ public class Database {
         else {
             Logger.log("starting database in memory mode");
             fileDb = DBMaker.memoryDB().make();
-            appDb = DBMaker.memoryDB().make();
         }
 
         usrMap = (ConcurrentMap<String, User>) fileDb.hashMap("user").createOrOpen();
-        appMap = (ConcurrentMap<String, AppDefinition>) appDb.hashMap("appDefs").createOrOpen();
+        appMap = (ConcurrentMap<String, AppDefinition>) fileDb.hashMap("appDefs").createOrOpen();
+        checkAppsIntegrity();
     }
 
     public void close() {
+        if (temp) { // remove all chunk files
+            for (AppDefinition def : appMap.values()) {
+                def.deleteFiles();
+            }
+            try {
+                Files.delete(Paths.get(AppDefinition.APPS_FOLDER));
+            } catch (IOException e) {
+                Logger.err(e.getMessage());
+            }
+        }
+
         try (fileDb) {
             Logger.log("closing meta database");
         }
-        try (appDb) {
-            Logger.log("closing app database");
+    }
+
+    private void checkAppsIntegrity() {
+        Logger.log("checking app integrities");
+        ArrayList<String> toRemove = new ArrayList<>();
+        for (Map.Entry<String, AppDefinition> entry : appMap.entrySet()) {
+            if (!entry.getValue().checkIntegrity()) {
+                Logger.warn("Appdef " + entry.getValue().name + " failed integrity check, deleting from DB");
+                entry.getValue().deleteFiles();
+                toRemove.add(entry.getKey());
+            }
         }
+
+        for (String s : toRemove) {
+            appMap.remove(s);
+        }
+
+        Logger.log("app integrity check complete");
     }
 
     /** 
