@@ -11,6 +11,8 @@ import com.esotericsoftware.kryonet.Listener;
 
 import nl.thomasgoossen.gooselib.shared.AppMetaData;
 import nl.thomasgoossen.gooselib.shared.EncryptedPacket;
+import nl.thomasgoossen.gooselib.shared.messages.ChunkReq;
+import nl.thomasgoossen.gooselib.shared.messages.ChunkResp;
 import nl.thomasgoossen.gooselib.shared.messages.ChunkUploadReq;
 import nl.thomasgoossen.gooselib.shared.messages.ChunkUploadResp;
 import nl.thomasgoossen.gooselib.shared.messages.HandshakeReq;
@@ -65,6 +67,13 @@ public class NetworkingListener extends Listener {
         Logger.dbg("data object in req listener with type: " + data.getClass().getSimpleName());
     
         switch (data) {
+            case ChunkReq req -> {
+                byte[] c = Database.getChunk(req.appName, req.index);
+                ChunkResp resp = new ChunkResp(req.appName, req.index, c);
+                EncryptedPacket p = new EncryptedPacket(resp, encKey);
+                Logger.dbg("sending chunk " + req.index + " for app " + req.appName);
+                conn.sendUDP(p);
+            }
             case UploadReq req -> {
                 if (Database.auth("admin", req.getAdminPass())) {
                     Logger.log("upload req recv, sending chunk upload requests");

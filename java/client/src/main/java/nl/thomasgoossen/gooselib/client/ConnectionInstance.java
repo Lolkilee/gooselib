@@ -10,6 +10,8 @@ import com.esotericsoftware.kryonet.Listener;
 
 import nl.thomasgoossen.gooselib.shared.EncryptedPacket;
 import nl.thomasgoossen.gooselib.shared.KryoHelper;
+import nl.thomasgoossen.gooselib.shared.messages.ChunkReq;
+import nl.thomasgoossen.gooselib.shared.messages.ChunkResp;
 import nl.thomasgoossen.gooselib.shared.messages.ChunkUploadReq;
 import nl.thomasgoossen.gooselib.shared.messages.ChunkUploadResp;
 import nl.thomasgoossen.gooselib.shared.messages.HandshakeResp;
@@ -41,6 +43,14 @@ public class ConnectionInstance {
             case LibInfoResp resp -> {
                 GLClient.setMetaData(resp.apps);
                 GLClient.setMetaSignal();
+            }
+            case ChunkResp resp -> {
+                Download.recvBytes(resp.cIndex, resp.data, resp.appName);
+                int next = Download.nextChunk(resp.appName);
+                if (next >= 0) {
+                    ChunkReq req = new ChunkReq(resp.appName, next);
+                    GLClient.sendPacketUDP(req);
+                }
             }
             default -> {
                 System.out.println("invalid data object");

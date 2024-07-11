@@ -30,6 +30,8 @@ public class GLClient {
         app = setUsernameHandler(app);
         app = setPasswordHandler(app);
         app = handshakeHandler(app);
+        app = downloadHandler(app);
+        app = downloadProgressHandler(app);
         app = uploadHandler(app);
         app = uploadStatusHandler(app);
         app = metaDataHandler(app);
@@ -77,6 +79,33 @@ public class GLClient {
             HandshakeResp resp = Handshake.performHandshake(ip, username, password);
             connection = new ConnectionInstance(ip, resp);
             ctx.json(resp);
+        });
+    }
+
+    // Path should be formatted between [] brackets, and ! instead of /
+    private static Javalin downloadHandler(Javalin app) {
+        return app.post("/download/{appIndex}/{dst}", ctx -> {
+            if (connection != null && metaData != null) {
+                String dst = ctx.pathParam("dst");
+                int appIndex = Integer.parseInt(ctx.pathParam("appIndex"));
+
+                dst = dst.replace("[", "");
+                dst = dst.replace("]", "");
+                dst = dst.replace("!", "/");
+
+                System.out.println("downloading to: " + Paths.get(dst).toAbsolutePath());
+                if (appIndex >= 0 && appIndex < metaData.length) {
+                    AppMetaData meta = metaData[appIndex];
+                    Download d = new Download(meta, dst);
+                    d.start();
+                }
+            }
+        });
+    }
+
+    private static Javalin downloadProgressHandler(Javalin app) {
+        return app.get("/download-progress", ctx -> {
+            ctx.json(Download.getDownloadInfos());
         });
     }
 

@@ -12,6 +12,8 @@ apps.bin
 temp.tar.gz
 
 test-upload/
+*/download-test/
+download-test/
 
 .classpath
 .settings/
