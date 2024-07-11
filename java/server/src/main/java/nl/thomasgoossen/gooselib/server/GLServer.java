@@ -40,7 +40,6 @@ public class GLServer {
             else if (!Database.auth("admin", adminPass))
                 Database.changeUserPassword("admin", adminPass);
             manager.run();
-            exit();
         } catch (IOException | InterruptedException e) {
             System.out.println(e.getMessage());
         }

@@ -232,6 +232,19 @@ public class Database {
     }
 
     /**
+     * Retrieves a chunk from the database
+     * @param name app name
+     * @param index chunk index
+     * @return chunk in form of byte[]
+     */
+    public static byte[] getChunk(String name, int index) {
+        if (appMap.containsKey(name) && index < appMap.get(name).getChunkCount()) {
+            return appMap.get(name).getChunk(index);
+        }
+        return null;
+    }
+
+    /**
      * Returns a list containg all meta datas of all apps
      * @return list with meta datas
      */

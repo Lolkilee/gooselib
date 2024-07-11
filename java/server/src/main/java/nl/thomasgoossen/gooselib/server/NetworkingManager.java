@@ -2,6 +2,9 @@ package nl.thomasgoossen.gooselib.server;
 
 import java.io.IOException;
 import java.util.Base64;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import javax.crypto.SecretKey;
 
@@ -23,10 +26,11 @@ public class NetworkingManager {
      */
     public static final int BEGIN_PORT = 61234;
 
-    private static boolean stopFlag = false;
+    private static volatile boolean stopFlag = false;
 
     private static ConnectionThreadRecord[] records;
     private Server manager;
+    private ScheduledExecutorService scheduler;
 
     /**
      * Manager class that handles all threads required for networking
@@ -67,13 +71,19 @@ public class NetworkingManager {
         manager.bind(BEGIN_PORT);
         manager.addListener(new NetworkingListener());
         KryoHelper.addRegisters(manager.getKryo());
-        
+
         Logger.log("starting manager connection loop");
         manager.start();
 
         Logger.dbg("current thread count: " + Thread.activeCount());
-        while (!stopFlag) {
-            // run this function until stopflag is set
+        scheduler = Executors.newSingleThreadScheduledExecutor();
+        scheduler.scheduleAtFixedRate(this::checkStopFlag, 0, 100, TimeUnit.MILLISECONDS);
+    }
+    
+    private void checkStopFlag() {
+        if (stopFlag) {
+            scheduler.shutdown();
+            GLServer.exit();
         }
     }
 
