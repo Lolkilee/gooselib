@@ -77,7 +77,7 @@ public class Upload {
             long length = end - begin;
             byte[] buff = new byte[(int) length];
             raf.readFully(buff);
-            System.out.println("read chunk: " + chunkIndex + " | " + begin + " | " + end);
+            //System.out.println("read chunk: " + chunkIndex + " | " + begin + " | " + end);
             return buff;
         } catch (IOException e) {
             System.out.println(e.getMessage());
