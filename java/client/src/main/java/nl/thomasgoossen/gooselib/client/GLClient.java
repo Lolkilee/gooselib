@@ -125,9 +125,16 @@ public class GLClient {
                 System.out.println("name: " + name);
                 System.out.println("version: " + version);
 
+                final String lPath = path;
+
                 if (Files.isDirectory(Paths.get(path))) {
                     ctx.result("starting upload");
-                    Upload.upload(password, path, name, version);
+                    new Thread(new Runnable() {
+                        @Override
+                        public void run() {
+                            Upload.upload(password, lPath, name, version);
+                        }
+                    }).start();
                 } else {
                     ctx.result("path is not a folder");
                 }
@@ -159,7 +166,7 @@ public class GLClient {
             ctx.json(metaData);
         });
     }
-    
+
     public static void sendPacketTCP(Object data) {
         if (connection != null) {
             connection.sendPacketTCP(data);
