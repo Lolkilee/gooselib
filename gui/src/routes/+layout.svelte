@@ -5,7 +5,6 @@
     import { resolveResource } from '@tauri-apps/api/path';
     import { fetch, ResponseType } from '@tauri-apps/api/http';
     import { listen } from '@tauri-apps/api/event';
-    import { exit } from '@tauri-apps/api/process';
 
     let clientProc: Child | null = null;
 
