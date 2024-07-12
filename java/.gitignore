@@ -18,3 +18,5 @@ download-test/
 
 .classpath
 .settings/
+
+.project

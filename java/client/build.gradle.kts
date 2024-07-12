@@ -37,7 +37,7 @@ tasks.named<Test>("test") {
 
 tasks {
     withType<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar> {
-        archiveBaseName.set("client-all")
+        archiveBaseName.set("gooselib-client")
         archiveClassifier.set("")
         archiveVersion.set("")
         manifest {
