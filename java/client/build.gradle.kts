@@ -1,5 +1,6 @@
 plugins {
     application
+    id("com.github.johnrengelman.shadow") version "8.1.1"
 }
 
 repositories {
@@ -32,4 +33,15 @@ application {
 
 tasks.named<Test>("test") {
     useJUnitPlatform()
+}
+
+tasks {
+    withType<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar> {
+        archiveBaseName.set("client-all")
+        archiveClassifier.set("")
+        archiveVersion.set("")
+        manifest {
+            attributes["Main-Class"] = "nl.thomasgoossen.gooselib.client.GLClient"
+        }
+    }
 }

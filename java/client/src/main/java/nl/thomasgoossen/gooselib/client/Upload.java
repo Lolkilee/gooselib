@@ -17,13 +17,14 @@ import nl.thomasgoossen.gooselib.shared.messages.UploadReq;
 
 public class Upload {
     private final static String UPLOAD_FILE = "./temp.tar.gz";
-    public final static int CHUNK_SIZE = 1024; //bytes per chunk
-    
+    public final static int CHUNK_SIZE = 1024; // bytes per chunk
+
     private static String curUploadName = "undefined";
     private static String status = "idle";
 
     public static void upload(String password, String folder, String name, String version) {
         curUploadName = name;
+        System.out.println("compressing...");
         compress(folder, UPLOAD_FILE);
         if (!Files.exists(Paths.get(UPLOAD_FILE))) {
             System.out.println("no upload file detected, stopping upload");
@@ -33,6 +34,7 @@ public class Upload {
         // Create and send initial uploadReq
         File f = new File(UPLOAD_FILE);
         int chunkCount = (int) Math.ceil((double) f.length() / CHUNK_SIZE);
+        System.out.println("chunks: " + chunkCount);
         UploadReq req = new UploadReq(password, name, version, chunkCount);
         GLClient.sendPacketTCP(req);
         status = "uploading";
@@ -63,7 +65,7 @@ public class Upload {
             System.out.println(e.getMessage());
         }
     }
-    
+
     public static byte[] getChunk(int chunkIndex) {
         long begin = chunkIndex * CHUNK_SIZE;
         long end = begin + CHUNK_SIZE;
@@ -77,7 +79,8 @@ public class Upload {
             long length = end - begin;
             byte[] buff = new byte[(int) length];
             raf.readFully(buff);
-            //System.out.println("read chunk: " + chunkIndex + " | " + begin + " | " + end);
+            // System.out.println("read chunk: " + chunkIndex + " | " + begin + " | " +
+            // end);
             return buff;
         } catch (IOException e) {
             System.out.println(e.getMessage());
@@ -85,7 +88,7 @@ public class Upload {
 
         return null;
     }
-    
+
     public static String getStatus() {
         return status;
     }
