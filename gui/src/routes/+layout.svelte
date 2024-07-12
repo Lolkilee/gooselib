@@ -8,6 +8,13 @@
 
     let clientProc: Child | null = null;
 
+    async function keepAliveReq() {
+        await fetch('http://localhost:7123/', {
+            method: 'GET',
+            responseType: ResponseType.Text,
+        });
+    }
+
     async function startClient() {
         let resourcePath: string = await resolveResource('java/');
         resourcePath = resourcePath.replace('\\\\?\\', '');
@@ -23,14 +30,8 @@
         console.log(resp);
     }
 
-    async function closeHandler() {
-        await listen('tauri://close-requested', async () => {
-            await fetch('http://localhost:7123/stop');
-        });
-    }
-
+    setInterval(keepAliveReq, 1000);
     startClient();
-    closeHandler();
 </script>
 
 <slot />
