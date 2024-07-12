@@ -1,7 +1,13 @@
 package nl.thomasgoossen.gooselib.client;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
+import org.eclipse.jetty.webapp.MetaData;
 
 import com.esotericsoftware.minlog.Log;
 import static com.esotericsoftware.minlog.Log.LEVEL_ERROR;
@@ -13,18 +19,21 @@ import nl.thomasgoossen.gooselib.shared.messages.LibInfoReq;
 
 public class GLClient {
     private static final int PORT = 7123;
+    private static final int TIMEOUT = 10000;
 
     private static AppMetaData[] metaData = null;
     private static volatile boolean metaSignal = false;
 
-    private static String username;
-    private static String password;
+    private static String username = "user";
+    private static String password = "password";
 
     private static ConnectionInstance connection;
+    private static volatile long lastReq;
 
     public static void main(String[] args) {
         Log.set(LEVEL_ERROR);
         Javalin app = Javalin.create();
+        app = lastReqUpdater(app);
         app = statusHandler(app);
         app = stopHandler(app);
         app = setUsernameHandler(app);
@@ -45,6 +54,23 @@ public class GLClient {
                     connection.stop();
             }
         });
+
+        Runnable checkTimeout = () -> {
+            if (System.currentTimeMillis() - lastReq > TIMEOUT) {
+                System.out.println("Timeout, exiting..");
+                System.exit(0);
+            }
+        };
+
+        lastReq = System.currentTimeMillis();
+        ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
+        executor.scheduleAtFixedRate(checkTimeout, 0, 100, TimeUnit.MILLISECONDS);
+    }
+
+    private static Javalin lastReqUpdater(Javalin app) {
+        return app.before(ctx -> {
+            lastReq = System.currentTimeMillis();
+        });
     }
 
     private static Javalin statusHandler(Javalin app) {
@@ -52,7 +78,19 @@ public class GLClient {
     }
 
     private static Javalin stopHandler(Javalin app) {
-        return app.get("/stop", ctx -> app.stop());
+        return app.get("/stop", ctx -> {
+            ctx.result("Ok, stopping..");
+            new java.util.Timer().schedule( 
+                new java.util.TimerTask() {
+                    @Override
+                    public void run() {
+                        app.stop();
+                        System.exit(0);
+                    }
+                }, 
+                100 
+            );
+        });
     }
 
     private static Javalin setUsernameHandler(Javalin app) {
@@ -76,9 +114,20 @@ public class GLClient {
             }
 
             String ip = ctx.pathParam("ip");
-            HandshakeResp resp = Handshake.performHandshake(ip, username, password);
-            connection = new ConnectionInstance(ip, resp);
-            ctx.json(resp);
+            
+            HandshakeResp resp = null;
+            try {
+                resp = Handshake.performHandshake(ip, username, password);
+            } catch (IOException | InterruptedException e) {
+                ctx.json(new ErrorWrapper(e.getMessage()));
+            }
+
+            if (resp != null) {
+                connection = new ConnectionInstance(ip, resp);
+                ctx.json(resp);
+            } else {
+                ctx.json(new ErrorWrapper(Handshake.getError()));
+            }
         });
     }
 
@@ -163,7 +212,10 @@ public class GLClient {
                 }
             }
 
-            ctx.json(metaData);
+            if (metaData != null)
+                ctx.json(metaData);
+            else
+                ctx.json(new MetaData[0]);
         });
     }
 

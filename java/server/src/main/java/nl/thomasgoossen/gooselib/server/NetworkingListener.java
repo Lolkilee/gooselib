@@ -11,6 +11,7 @@ import com.esotericsoftware.kryonet.Listener;
 
 import nl.thomasgoossen.gooselib.shared.AppMetaData;
 import nl.thomasgoossen.gooselib.shared.EncryptedPacket;
+import nl.thomasgoossen.gooselib.shared.messages.AuthError;
 import nl.thomasgoossen.gooselib.shared.messages.ChunkReq;
 import nl.thomasgoossen.gooselib.shared.messages.ChunkResp;
 import nl.thomasgoossen.gooselib.shared.messages.ChunkUploadReq;
@@ -145,6 +146,10 @@ public class NetworkingListener extends Listener {
                             NetworkingManager.getEncryptionKey(info[0]));
                     EncryptedPacket rPkt = new EncryptedPacket(resp, null);
                     conn.sendTCP(rPkt);
+                } else {
+                    AuthError err = new AuthError("could not auth username + password");
+                    EncryptedPacket p = new EncryptedPacket(err, null);
+                    conn.sendTCP(p);
                 }
             }
             default -> Logger.warn("deserialized data was not recognized by onManagerRequest()");
