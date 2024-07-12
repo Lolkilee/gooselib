@@ -17,7 +17,7 @@ public class Handshake {
 
     private static boolean receivedResp = false;
     private static HandshakeResp resp = null;
-    private static String err = null;
+    private static volatile String err = null;
     private static final Object lock = new Object();
 
     private static Listener listener() {
