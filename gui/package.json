@@ -30,6 +30,7 @@
   },
   "type": "module",
   "dependencies": {
+    "@iconify/svelte": "^4.0.2",
     "@tauri-apps/api": "^1.6.0"
   },
   "prettier": {
