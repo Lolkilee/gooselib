@@ -42,47 +42,43 @@ public class AppDefinition implements Serializable {
     }
 
     public void appendChunk(byte[] chunk) {
-        if (raf != null) {
-            try {
+        try {
+            if (raf != null) {
                 raf.close();
                 raf = null;
+            }
+
+            try (FileOutputStream stream = new FileOutputStream(chunksPath, true)) {
+                stream.write(chunk);
+                IChunk entry = new IChunk(currentEndIndex, currentEndIndex + chunk.length);
+                chunks.add(entry);
+                currentEndIndex += chunk.length;
             } catch (IOException e) {
                 Logger.err(e.getMessage());
             }
-        }
-
-        try (FileOutputStream stream = new FileOutputStream(chunksPath, true)) {
-            stream.write(chunk);
-            IChunk entry = new IChunk(currentEndIndex, currentEndIndex + chunk.length);
-            chunks.addLast(entry);
-            currentEndIndex += chunk.length;
         } catch (IOException e) {
             Logger.err(e.getMessage());
         }
     }
 
     public byte[] getChunk(int i) {
-        if (raf == null) {
-            try {
+        try {
+            if (raf == null) {
                 raf = new RandomAccessFile(chunksPath, "r");
-            } catch (IOException e) {
-                Logger.err(e.getMessage());
             }
-        }
 
-        if (raf != null && i >= 0 && i < chunks.size()) {
-            IChunk chunkEntry = chunks.get(i);
-            long length = chunkEntry.end - chunkEntry.begin;
-            try {
-                raf.seek(chunkEntry.begin);
+            if (i >= 0 && i < chunks.size()) {
+                IChunk chunkEntry = chunks.get(i);
+                long length = chunkEntry.end - chunkEntry.begin;
                 byte[] chunk = new byte[(int) length];
+
+                raf.seek(chunkEntry.begin);
                 raf.readFully(chunk);
                 return chunk;
-            } catch (IOException e1) {
-                Logger.err(e1.getMessage());
             }
+        } catch (IOException e) {
+            Logger.err(e.getMessage());
         }
-        
         return null;
     }
 
@@ -124,5 +120,15 @@ public class AppDefinition implements Serializable {
 
     public AppMetaData getMetaData() {
         return new AppMetaData(this.name, this.curVersion, this.chunks.size());
+    }
+
+    public void cleanUp() {
+        if (raf != null) {
+            try {
+                raf.close();
+            } catch (IOException e) {
+                Logger.err(e.getMessage());
+            }
+        }
     }
 }

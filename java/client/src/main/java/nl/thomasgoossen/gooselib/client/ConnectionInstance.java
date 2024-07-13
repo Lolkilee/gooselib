@@ -47,9 +47,9 @@ public class ConnectionInstance {
             case ChunkResp resp -> {
                 Download.recvBytes(resp.cIndex, resp.data, resp.appName);
                 int next = Download.nextChunk(resp.appName);
-                if (next >= 0) {
+                if (next >= 0 && !Download.isDone(resp.appName)) {
                     ChunkReq req = new ChunkReq(resp.appName, next);
-                    GLClient.sendPacketUDP(req);
+                    GLClient.sendPacketTCP(req);
                 }
             }
             default -> {
