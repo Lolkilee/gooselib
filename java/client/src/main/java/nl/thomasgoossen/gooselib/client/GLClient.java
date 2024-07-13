@@ -55,16 +55,26 @@ public class GLClient {
             }
         });
 
-        Runnable checkTimeout = () -> {
-            if (System.currentTimeMillis() - lastReq > TIMEOUT) {
-                System.out.println("Timeout, exiting..");
-                System.exit(0);
-            }
-        };
+        if (!checkFlag(args, "notimeout")) {
+            Runnable checkTimeout = () -> {
+                if (System.currentTimeMillis() - lastReq > TIMEOUT) {
+                    System.out.println("Timeout, exiting..");
+                    System.exit(0);
+                }
+            };
+            lastReq = System.currentTimeMillis();
+            ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
+            executor.scheduleAtFixedRate(checkTimeout, 0, 100, TimeUnit.MILLISECONDS);
+        }
+    }
 
-        lastReq = System.currentTimeMillis();
-        ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
-        executor.scheduleAtFixedRate(checkTimeout, 0, 100, TimeUnit.MILLISECONDS);
+    private static boolean checkFlag(String[] args, String flag) {
+        for (String a : args) {
+            if (a.toLowerCase().replace("-", "").equals(flag.toLowerCase()))
+                return true;
+        }
+
+        return false;
     }
 
     private static Javalin lastReqUpdater(Javalin app) {
