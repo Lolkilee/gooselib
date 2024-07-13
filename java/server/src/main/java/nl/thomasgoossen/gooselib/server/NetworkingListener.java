@@ -78,6 +78,7 @@ public class NetworkingListener extends Listener {
                 if (Database.auth("admin", req.getAdminPass())) {
                     Logger.log("upload req recv, sending chunk upload requests");
                     Database.createOrClearApp(req.appName, req.version);
+                    Database.setAppPublic(req.appName, false);
                     uploadBuffers.put(req.appName, new UploadBuffer(req.appName, req.chunkCount));
                     expectedLists.put(req.appName, new ArrayList<>());
                     expectedLists.get(req.appName).add(0);
@@ -86,8 +87,7 @@ public class NetworkingListener extends Listener {
                 }
             }
             case ChunkUploadResp resp -> {
-                if (Database.auth("admin", resp.getAdminPass())
-                        && uploadBuffers.containsKey(resp.appName)
+                if (uploadBuffers.containsKey(resp.appName)
                         && expectedLists.containsKey(resp.appName)) {
                     
                     Logger.dbg("chunk recv, size " + resp.chunk.length + ", index " + resp.index);
@@ -110,6 +110,7 @@ public class NetworkingListener extends Listener {
                         UploadCompleteMsg msg = new UploadCompleteMsg(buff.totalCount);
                         EncryptedPacket p = new EncryptedPacket(msg, encKey);
                         conn.sendTCP(p);
+                        Database.setAppPublic(resp.appName, true);
                     }
                 }
             }
