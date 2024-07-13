@@ -156,6 +156,8 @@ public class GLClient {
                 if (appIndex >= 0 && appIndex < metaData.length) {
                     AppMetaData meta = metaData[appIndex];
                     Download d = new Download(meta, dst);
+                    System.out.println("started download instance with name: "
+                        + d.getName());
                 }
             }
         });
