@@ -1,6 +1,7 @@
 import { fetch, ResponseType } from '@tauri-apps/api/http';
+import { cacheMetaData } from './metadata';
 
-const BASE_URL = 'http://localhost:7123/';
+export const BASE_URL = 'http://localhost:7123/';
 
 async function setReq(param: string, paramVal: string) {
     const res = await fetch(BASE_URL + 'set-' + param + '/' + paramVal, {
@@ -28,6 +29,7 @@ export async function tryHandshake(username: string,
         localStorage.setItem('username', username);
         localStorage.setItem('password', password);
         localStorage.setItem('ip', ip);
+        cacheMetaData();
         return true;
     }
     else {
