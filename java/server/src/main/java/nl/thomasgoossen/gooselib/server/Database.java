@@ -50,10 +50,6 @@ public class Database {
     }
 
     public void close() {
-        for (AppDefinition def : appMap.values()) {
-            def.cleanUp();
-        }
-        
         if (temp) { // remove all chunk files
             for (AppDefinition def : appMap.values()) {
                 def.deleteFiles();
@@ -249,6 +245,19 @@ public class Database {
     }
 
     /**
+     * Sets the isPublic boolean for an app if it exists
+     * @param name app name
+     * @param val value to set isPublic to
+     */
+    public static void setAppPublic(String name, boolean val) {
+        if (appMap.containsKey(name)) {
+            AppDefinition a = appMap.get(name);
+            a.setIsPublic(val);
+            appMap.put(name, a);
+        }
+    }
+
+    /**
      * Returns null if app not present
      * @param name app name
      * @return AppDefinition object
@@ -282,7 +291,8 @@ public class Database {
     public static ArrayList<AppMetaData> getAppMetas() {
         ArrayList<AppMetaData> arr = new ArrayList<>();
         for (AppDefinition a : appMap.values()) {
-            arr.add(a.getMetaData());
+            if (a.getIsPublic())
+                arr.add(a.getMetaData());
         }
         return arr;
     }

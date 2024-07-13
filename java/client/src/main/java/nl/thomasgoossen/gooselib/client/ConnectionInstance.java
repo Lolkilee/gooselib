@@ -29,7 +29,6 @@ public class ConnectionInstance {
                 if (req.appName.equals(Upload.getCurUploadName())) {
                     byte[] chunk = Upload.getChunk(req.index);
                     ChunkUploadResp resp = new ChunkUploadResp(
-                            GLClient.getPassword(),
                             Upload.getCurUploadName(),
                             req.index, chunk);
                     GLClient.sendPacketUDP(resp);
