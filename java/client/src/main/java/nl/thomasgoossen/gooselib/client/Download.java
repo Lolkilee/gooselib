@@ -36,6 +36,7 @@ public class Download {
     private final TimeoutThread tThread;
 
     private int lastAppended = -1;
+    private volatile boolean done = false;
 
     public Download(AppMetaData meta, String folder) throws FileNotFoundException {
         this.appName = meta.name;
@@ -53,7 +54,7 @@ public class Download {
         instances.put(meta.name, d);
 
         ChunkReq req = new ChunkReq(meta.name, 0);
-        GLClient.sendPacketUDP(req);
+        GLClient.sendPacketTCP(req);
 
         tThread = new TimeoutThread(appName);
     }
@@ -78,13 +79,17 @@ public class Download {
                     } catch (IOException e) {
                         System.out.println(e.getMessage());
                     }
-                } else
+                } else if (i > lastAppended + 1) 
                     break;
+                else
+                    toRemove.add(i);
             }
             
             for (int i : toRemove) {
-                chunkQ.remove(chunkQ.indexOf(i));
-                chunksBuff.remove(i);
+                if (chunkQ.contains(i))
+                    chunkQ.remove(chunkQ.indexOf(i));
+                if (chunksBuff.containsKey(i))
+                    chunksBuff.remove(i);
             }
 
             // Download is done, decompress and finalize
@@ -92,6 +97,7 @@ public class Download {
                 try {
                     fos.close();
                     decompress(path, folder);
+                    done = true;
                     System.out.println("finished download for " + appName);
                     tThread.stop();
                     instances.remove(appName);
@@ -138,13 +144,19 @@ public class Download {
     }
 
     public int next() {
-        if (!chunkQ.isEmpty())
-            return chunkQ.getFirst();
+        if (!chunkQ.isEmpty() && !done) {
+            int index = chunkQ.getFirst();
+            return index;
+        }
         return -1;
     }
 
     public float progress() {
         return ((float) chunkQ.size()) / ((float) totalChunkCount);
+    }
+
+    public boolean getDone() {
+        return done;
     }
 
     public static int nextChunk(String name) {
@@ -156,9 +168,9 @@ public class Download {
     public static void recvBytes(int index, byte[] bytes, String name) {
         if (instances.containsKey(name)) {
             Download d = instances.get(name);
+            d.tThread.updateRecv();
             d.addChunk(index, bytes);
             d.pushBuffer();
-            instances.put(name, d);
         }
     }
 
@@ -178,5 +190,11 @@ public class Download {
         }
 
         return arr;
+    }
+
+    public static boolean isDone(String name) {
+        if (!instances.containsKey(name))
+            return true;
+        return instances.get(name).getDone();
     }
 }

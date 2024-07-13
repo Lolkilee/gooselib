@@ -50,6 +50,10 @@ public class Database {
     }
 
     public void close() {
+        for (AppDefinition def : appMap.values()) {
+            def.cleanUp();
+        }
+        
         if (temp) { // remove all chunk files
             for (AppDefinition def : appMap.values()) {
                 def.deleteFiles();
