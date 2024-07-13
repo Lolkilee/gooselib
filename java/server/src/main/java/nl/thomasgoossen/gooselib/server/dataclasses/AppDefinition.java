@@ -1,6 +1,9 @@
 package nl.thomasgoossen.gooselib.server.dataclasses;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.io.Serializable;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -16,17 +19,22 @@ public class AppDefinition implements Serializable {
 
     private String curVersion;
     private final String chunksPath;
-    private final ArrayList<String> chunks; // stores paths of files
+
+    // <begin index (inclusive), end index (inclusive)
+    private final ArrayList<IChunk> chunks;
+    private Long currentEndIndex = (long) 0;
+
+    private RandomAccessFile raf;
 
     public AppDefinition(String name, String version) {
         this.name = name;
-        this.chunksPath = APPS_FOLDER + name + "/";
+        this.chunksPath = APPS_FOLDER + name + ".bin";
         this.curVersion = version;
         this.chunks = new ArrayList<>();
 
-        if (!Files.exists(Paths.get(chunksPath))) {
+        if (!Files.exists(Paths.get(APPS_FOLDER))) {
             try {
-                Files.createDirectories(Paths.get(chunksPath));
+                Files.createDirectories(Paths.get(APPS_FOLDER));
             } catch (IOException e) {
                 Logger.err(e.getMessage());
             }
@@ -34,23 +42,45 @@ public class AppDefinition implements Serializable {
     }
 
     public void appendChunk(byte[] chunk) {
-        String path = chunksPath + chunks.size() + ".bin";
-        try {
-            Files.write(Paths.get(path), chunk);
+        if (raf != null) {
+            try {
+                raf.close();
+                raf = null;
+            } catch (IOException e) {
+                Logger.err(e.getMessage());
+            }
+        }
+
+        try (FileOutputStream stream = new FileOutputStream(chunksPath, true)) {
+            stream.write(chunk);
+            IChunk entry = new IChunk(currentEndIndex, currentEndIndex + chunk.length - 1);
+            chunks.addLast(entry);
+            currentEndIndex += chunk.length;
         } catch (IOException e) {
             Logger.err(e.getMessage());
         }
-        this.chunks.add(path);
     }
 
     public byte[] getChunk(int i) {
-        String path = chunks.get(i);
-        byte[] c;
-        try {
-            c = Files.readAllBytes(Paths.get(path));
-            return c;
-        } catch (IOException e) {
-            Logger.err(e.getMessage());
+        if (raf == null) {
+            try {
+                raf = new RandomAccessFile(chunksPath, "r");
+            } catch (IOException e) {
+                Logger.err(e.getMessage());
+            }
+        }
+
+        if (raf != null && i >= 0 && i < chunks.size()) {
+            IChunk chunkEntry = chunks.get(i);
+            long length = chunkEntry.end - chunkEntry.begin + 1;
+            try {
+                raf.seek(chunkEntry.begin);
+                byte[] chunk = new byte[(int) length];
+                raf.readFully(chunk);
+                return chunk;
+            } catch (IOException e1) {
+                Logger.err(e1.getMessage());
+            }
         }
         
         return null;
@@ -70,13 +100,6 @@ public class AppDefinition implements Serializable {
 
     public void deleteFiles() {
         Logger.warn("deleteChunks() called for AppDef " + name);
-        for (String p : chunks) {
-            try {
-                Files.delete(Paths.get(p));
-            } catch (IOException e) {
-                Logger.err(e.getMessage());
-            }
-        }
         try {
             Files.delete(Paths.get(chunksPath));
         } catch (IOException e) {
@@ -85,12 +108,8 @@ public class AppDefinition implements Serializable {
     }
 
     public boolean checkIntegrity() {
-        for (String p : chunks) {
-            if(!Files.exists(Paths.get(p)))
-                return false;
-        }
-
-        return true;
+        File f = new File(chunksPath);
+        return (f.length() == currentEndIndex + 1);
     }
 
     // Should only called by tests
