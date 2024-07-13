@@ -20,7 +20,7 @@ public class AppDefinition implements Serializable {
     private String curVersion;
     private final String chunksPath;
 
-    // <begin index (inclusive), end index (inclusive)
+    // <begin index (inclusive), end index (exclusive)
     private final ArrayList<IChunk> chunks;
     private Long currentEndIndex = (long) 0;
 
@@ -53,7 +53,7 @@ public class AppDefinition implements Serializable {
 
         try (FileOutputStream stream = new FileOutputStream(chunksPath, true)) {
             stream.write(chunk);
-            IChunk entry = new IChunk(currentEndIndex, currentEndIndex + chunk.length - 1);
+            IChunk entry = new IChunk(currentEndIndex, currentEndIndex + chunk.length);
             chunks.addLast(entry);
             currentEndIndex += chunk.length;
         } catch (IOException e) {
@@ -72,7 +72,7 @@ public class AppDefinition implements Serializable {
 
         if (raf != null && i >= 0 && i < chunks.size()) {
             IChunk chunkEntry = chunks.get(i);
-            long length = chunkEntry.end - chunkEntry.begin + 1;
+            long length = chunkEntry.end - chunkEntry.begin;
             try {
                 raf.seek(chunkEntry.begin);
                 byte[] chunk = new byte[(int) length];
@@ -109,7 +109,7 @@ public class AppDefinition implements Serializable {
 
     public boolean checkIntegrity() {
         File f = new File(chunksPath);
-        return (f.length() == currentEndIndex + 1);
+        return (f.length() == currentEndIndex);
     }
 
     // Should only called by tests
