@@ -159,6 +159,10 @@ public class Download {
         return done;
     }
 
+    public String getName() {
+        return appName;
+    }
+
     public static int nextChunk(String name) {
         if (instances.containsKey(name)) 
             return instances.get(name).next();
