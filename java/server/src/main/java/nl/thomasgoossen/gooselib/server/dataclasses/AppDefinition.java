@@ -17,6 +17,7 @@ public class AppDefinition implements Serializable {
     private String curVersion;
     private final String chunksPath;
     private final ArrayList<String> chunks; // stores paths of files
+    private long bytesCount = 0;
 
     private volatile boolean isPublic = true;
 
@@ -39,6 +40,7 @@ public class AppDefinition implements Serializable {
         String path = chunksPath + chunks.size() + ".bin";
         try {
             Files.write(Paths.get(path), chunk);
+            bytesCount += chunk.length;
         } catch (IOException e) {
             Logger.err(e.getMessage());
         }
@@ -106,7 +108,7 @@ public class AppDefinition implements Serializable {
     }
 
     public AppMetaData getMetaData() {
-        return new AppMetaData(this.name, this.curVersion, this.chunks.size());
+        return new AppMetaData(this.name, this.curVersion, this.chunks.size(), this.bytesCount);
     }
 
     public void setIsPublic(boolean val) {

@@ -21,10 +21,10 @@
         getDrawerStore,
     } from '@skeletonlabs/skeleton';
 
-    import LoginModal from '$lib/loginModal.svelte';
+    import LoginModal from '$lib/LoginModal.svelte';
     import { loginModalSettings } from '$lib/modals';
     import { tryHandshake } from '$lib/login';
-    import { loginCacheFail, loginSuccToast } from '$lib/toasts';
+    import { loginCacheFail, loginSuccToast, logoutToast } from '$lib/toasts';
     import {
         cacheMetaData,
         getMetaData,
@@ -40,9 +40,11 @@
 
     initializeStores();
 
+    const storedTheme = localStorage.getItem('theme');
+    if (storedTheme != null) document.body.dataset.theme = storedTheme;
+
     let clientProc: Child | null = null;
     let selected: MetaData | null = null;
-    let loaded = false;
 
     let appVersion: string = 'undefined';
 
@@ -78,7 +80,6 @@
         if (getMetaData() != null) {
             //@ts-ignore
             metaLibStore.set(getMetaData());
-            loaded = true;
         }
     }
 
@@ -99,26 +100,7 @@
         }
 
         if (sessionStorage.getItem('logged-in') == 'false') {
-            let attempt = false;
-            const savUser = localStorage.getItem('username');
-            const savPass = localStorage.getItem('password');
-            const ip = localStorage.getItem('ip');
-
-            if (savUser && savPass && ip) {
-                attempt = await tryHandshake(savUser, savPass, ip);
-            }
-
-            if (!attempt) {
-                toastStore.trigger(loginCacheFail);
-                while (sessionStorage.getItem('logged-in') == 'false') {
-                    if (sessionStorage.getItem('login-alive') == 'false') {
-                        modalStore.trigger(loginModalSettings);
-                    }
-                    await new Promise((r) => setTimeout(r, 100));
-                }
-            } else {
-                toastStore.trigger(loginSuccToast);
-            }
+            await loginProcess();
         }
 
         const updateInt = setInterval(updateMeta, 100);
@@ -128,16 +110,47 @@
         updateMeta();
     }
 
+    async function loginProcess(triggerCacheErr: boolean = true) {
+        let attempt = false;
+        const savUser = localStorage.getItem('username');
+        const savPass = localStorage.getItem('password');
+        const ip = localStorage.getItem('ip');
+
+        if (savUser && savPass && ip) {
+            attempt = await tryHandshake(savUser, savPass, ip);
+        }
+
+        if (!attempt) {
+            if (triggerCacheErr) toastStore.trigger(loginCacheFail);
+            while (sessionStorage.getItem('logged-in') == 'false') {
+                if (sessionStorage.getItem('login-alive') == 'false') {
+                    modalStore.trigger(loginModalSettings);
+                }
+                await new Promise((r) => setTimeout(r, 100));
+            }
+        } else {
+            toastStore.trigger(loginSuccToast);
+        }
+    }
+
     async function setVer() {
         appVersion = await getVersion();
     }
 
+    async function logout(resetPass = true) {
+        if (sessionStorage.getItem('login-alive') == 'false') {
+            if (resetPass) localStorage.removeItem('password');
+            sessionStorage.setItem('logged-in', 'false');
+            sessionStorage.setItem('login-alive', 'false');
+            toastStore.trigger(logoutToast);
+            loginProcess(false);
+        }
+    }
+
     setVer();
     startClient();
-    const kaInt = setInterval(keepAliveReq, 1000);
-    onDestroy(() => {
-        clearInterval(kaInt);
-    });
+
+    setInterval(keepAliveReq, 1000);
 
     let metaLib: MetaLibrary | null = null;
     onMount(() => {
@@ -194,9 +207,16 @@
                 class="card p-4 h-screen min-w-64 max-w-64 overflow-y-auto flex flex-col justify-between"
             >
                 <div>
-                    <h2 class="h2">Library</h2>
+                    <button
+                        on:click={() => {
+                            selected = null;
+                            goto('/');
+                        }}
+                    >
+                        <h2 class="h2">Library</h2>
+                    </button>
                     <hr class="!border-t-4 my-2" />
-                    {#if loaded && metaLib != null}
+                    {#if metaLib != null}
                         <ListBox>
                             {#each metaLib as app}
                                 <ListBoxItem
@@ -231,7 +251,8 @@
                         type="button"
                         class="btn variant-filled"
                         on:click={() => {
-                            navigateToPage('settings');
+                            selected = null;
+                            goto('/settings');
                         }}
                     >
                         <Icon icon="mdi:settings" />
@@ -242,6 +263,15 @@
                         on:click={openDownloadDrawer}
                     >
                         <Icon icon="mdi:chart-line" />
+                    </button>
+                    <button
+                        type="button"
+                        class="btn variant-filled-error"
+                        on:click={() => {
+                            logout();
+                        }}
+                    >
+                        <Icon icon="material-symbols:logout" />
                     </button>
                 </div>
                 <p class="mt-12 text-right text-slate-600">

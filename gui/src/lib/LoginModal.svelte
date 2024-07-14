@@ -21,11 +21,9 @@
     const savPass = localStorage.getItem('password');
     const ip = localStorage.getItem('ip');
 
-    if (savUser && savPass && ip) {
-        formData.ip = ip;
-        formData.username = savUser;
-        formData.password = savPass;
-    }
+    if (savUser) formData.username = savUser;
+    if (savPass) formData.password = savPass;
+    if (ip) formData.ip = ip;
 
     sessionStorage.setItem('login-alive', 'true');
 

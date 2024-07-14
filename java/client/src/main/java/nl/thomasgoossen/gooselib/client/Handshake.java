@@ -20,6 +20,8 @@ public class Handshake {
     private static volatile String err = null;
     private static final Object lock = new Object();
 
+    public static boolean isHandshaking = false;
+
     private static Listener listener() {
         return (new Listener() {
             @Override
@@ -45,31 +47,38 @@ public class Handshake {
     
     public static HandshakeResp performHandshake(String ip, String username, String password)
             throws InterruptedException, IOException {
-        Client c = new Client();
+        
+        isHandshaking = true;
+        try {
+            Client c = new Client();
 
-        c.start();
-        c.addListener(listener());
-        KryoHelper.addRegisters(c.getKryo());
-        c.connect(5000, ip, MANAGER_PORT);
+            c.start();
+            c.addListener(listener());
+            KryoHelper.addRegisters(c.getKryo());
+            c.connect(5000, ip, MANAGER_PORT);
 
-        HandshakeReq req = new HandshakeReq(username, password);
-        EncryptedPacket pkt = new EncryptedPacket(req, null);
-        c.sendTCP(pkt);
+            HandshakeReq req = new HandshakeReq(username, password);
+            EncryptedPacket pkt = new EncryptedPacket(req, null);
+            c.sendTCP(pkt);
 
-        synchronized (lock) {
-            long start = System.currentTimeMillis();
-            while (!receivedResp) {
-                long elapsed = System.currentTimeMillis() - start;
-                long waitTime = 5000 - elapsed;
-                if (waitTime <= 0) {
-                    c.stop();
-                    return resp;
+            synchronized (lock) {
+                long start = System.currentTimeMillis();
+                while (!receivedResp) {
+                    long elapsed = System.currentTimeMillis() - start;
+                    long waitTime = 5000 - elapsed;
+                    if (waitTime <= 0) {
+                        c.stop();
+                        return resp;
+                    }
+                    lock.wait(waitTime);
                 }
-                lock.wait(waitTime);
             }
-        }
 
-        c.stop();
+            c.stop();
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+        }
+        isHandshaking = false;
         return resp;
     }
     
