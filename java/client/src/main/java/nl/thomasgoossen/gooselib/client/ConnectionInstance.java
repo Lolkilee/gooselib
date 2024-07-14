@@ -91,4 +91,8 @@ public class ConnectionInstance {
         EncryptedPacket p = new EncryptedPacket(data, key);
         client.sendUDP(p);
     }
+
+    public boolean isConnected() {
+        return client.isConnected();
+    }
 }

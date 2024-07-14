@@ -36,21 +36,23 @@ public class EncryptedPacket {
     }
 
     public Object getDataObject(SecretKey key) {
-        try {
-            if (key != null) {
-                byte[] decrypted = EncryptionHelper.decrypt(this.data, key);
-                ByteArrayInputStream bais = new ByteArrayInputStream(decrypted);
-                ObjectInputStream ois = new ObjectInputStream(bais);
-                return ois.readObject();
-            } else {
-                ByteArrayInputStream bais = new ByteArrayInputStream(data);
-                ObjectInputStream ois = new ObjectInputStream(bais);
-                return ois.readObject();
+        if (data != null) {
+            try {
+                if (key != null) {
+                    byte[] decrypted = EncryptionHelper.decrypt(this.data, key);
+                    ByteArrayInputStream bais = new ByteArrayInputStream(decrypted);
+                    ObjectInputStream ois = new ObjectInputStream(bais);
+                    return ois.readObject();
+                } else {
+                    ByteArrayInputStream bais = new ByteArrayInputStream(data);
+                    ObjectInputStream ois = new ObjectInputStream(bais);
+                    return ois.readObject();
+                }
+            } catch (IOException | ClassNotFoundException e) {
+                return null;
             }
-        } catch (IOException | ClassNotFoundException e) {
-            System.out.println(e.getMessage());
+        } else
             return null;
-        }
     }
 
     public byte[] getData() {

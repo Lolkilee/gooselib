@@ -10,12 +10,18 @@ export const loginErrToast: ToastSettings = {
 export const loginSuccToast: ToastSettings = {
     message: 'Successfully logged in',
     hideDismiss: true,
-    timeout: 1000
+    timeout: 2000
 }
 
 export const loginCacheFail: ToastSettings = {
     message: 'Failed to login with saved data',
     background: 'variant-filled-warning',
+    hideDismiss: true,
+    timeout: 2000
+}
+
+export const logoutToast: ToastSettings = {
+    message: 'Logged out from server',
     hideDismiss: true,
     timeout: 2000
 }

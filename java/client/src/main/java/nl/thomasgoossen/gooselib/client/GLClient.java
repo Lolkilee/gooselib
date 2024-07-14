@@ -44,6 +44,7 @@ public class GLClient {
         app = uploadHandler(app);
         app = uploadStatusHandler(app);
         app = metaDataHandler(app);
+        app = connectionStatusHandler(app);
         app.start(PORT);
 
         Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -119,24 +120,28 @@ public class GLClient {
 
     private static Javalin handshakeHandler(Javalin app) {
         return app.post("/handshake/{ip}", ctx -> {
-            if (connection != null) {
-                connection.stop();
-            }
+            if (!Handshake.isHandshaking) {
+                if (connection != null) {
+                    connection.stop();
+                }
 
-            String ip = ctx.pathParam("ip");
-            
-            HandshakeResp resp = null;
-            try {
-                resp = Handshake.performHandshake(ip, username, password);
-            } catch (IOException | InterruptedException e) {
-                ctx.json(new ErrorWrapper(e.getMessage()));
-            }
+                String ip = ctx.pathParam("ip");
 
-            if (resp != null) {
-                connection = new ConnectionInstance(ip, resp);
-                ctx.json(resp);
+                HandshakeResp resp = null;
+                try {
+                    resp = Handshake.performHandshake(ip, username, password);
+                } catch (IOException | InterruptedException e) {
+                    ctx.json(new ErrorWrapper(e.getMessage()));
+                }
+
+                if (resp != null) {
+                    connection = new ConnectionInstance(ip, resp);
+                    ctx.json(resp);
+                } else {
+                    ctx.json(new ErrorWrapper(Handshake.getError()));
+                }
             } else {
-                ctx.json(new ErrorWrapper(Handshake.getError()));
+                ctx.json(new ErrorWrapper("already handshaking..."));
             }
         });
     }
@@ -189,11 +194,8 @@ public class GLClient {
 
                 if (Files.isDirectory(Paths.get(path))) {
                     ctx.result("starting upload");
-                    new Thread(new Runnable() {
-                        @Override
-                        public void run() {
-                            Upload.upload(password, lPath, name, version);
-                        }
+                    new Thread(() -> {
+                        Upload.upload(password, lPath, name, version);
                     }).start();
                 } else {
                     ctx.result("path is not a folder");
@@ -229,6 +231,16 @@ public class GLClient {
                 ctx.json(new MetaData[0]);
         });
     }
+
+    private static Javalin connectionStatusHandler(Javalin app) {
+        return app.get("/connection", ctx -> {
+            boolean b = (connection != null);
+            if(!b)
+                ctx.json(new ConnectionStatus(b));
+            else
+                ctx.json(new ConnectionStatus(connection.isConnected()));
+        });
+    } 
 
     public static void sendPacketTCP(Object data) {
         if (connection != null) {
