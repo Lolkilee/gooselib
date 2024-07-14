@@ -24,7 +24,12 @@
     import LoginModal from '$lib/LoginModal.svelte';
     import { loginModalSettings } from '$lib/modals';
     import { tryHandshake } from '$lib/login';
-    import { loginCacheFail, loginSuccToast, logoutToast } from '$lib/toasts';
+    import {
+        downloadCompeleteToast,
+        loginCacheFail,
+        loginSuccToast,
+        logoutToast,
+    } from '$lib/toasts';
     import {
         cacheMetaData,
         getMetaData,
@@ -32,21 +37,31 @@
         type MetaLibrary,
     } from '$lib/metadata';
 
-    import { metaLibStore, selectedMetaStore } from '$lib/stores';
+    import {
+        downloadInfoStore,
+        metaLibStore,
+        selectedMetaStore,
+    } from '$lib/stores';
     import { onDestroy, onMount } from 'svelte';
     import Icon from '@iconify/svelte';
     import { goto } from '$app/navigation';
     import DownloadDrawer from '$lib/DownloadDrawer.svelte';
+    import { getDownloadInfos } from '$lib/download';
 
     initializeStores();
 
     const storedTheme = localStorage.getItem('theme');
     if (storedTheme != null) document.body.dataset.theme = storedTheme;
 
+    const storedInstallFolder = localStorage.getItem('installFolder');
+    if (!storedInstallFolder) localStorage.setItem('installFolder', './');
+
     let clientProc: Child | null = null;
     let selected: MetaData | null = null;
 
     let appVersion: string = 'undefined';
+
+    let lastDownloadCount = 0;
 
     const BASE_URL = 'http://localhost:7123/';
     const modalStore = getModalStore();
@@ -83,6 +98,18 @@
         }
     }
 
+    async function updateDownloadInfo() {
+        const newInfo = await getDownloadInfos();
+        sessionStorage.setItem('download-info', JSON.stringify(newInfo));
+        downloadInfoStore.set(newInfo);
+    }
+
+    downloadInfoStore.subscribe((val) => {
+        if (val.length < lastDownloadCount)
+            toastStore.trigger(downloadCompeleteToast);
+        lastDownloadCount = val.length;
+    });
+
     async function startClient() {
         sessionStorage.setItem('logged-in', 'false');
         sessionStorage.setItem('login-alive', 'false');
@@ -103,10 +130,6 @@
             await loginProcess();
         }
 
-        const updateInt = setInterval(updateMeta, 100);
-        onDestroy(() => {
-            clearInterval(updateInt);
-        });
         updateMeta();
     }
 
@@ -151,16 +174,16 @@
     startClient();
 
     setInterval(keepAliveReq, 1000);
+    setInterval(updateDownloadInfo, 100);
+
+    const updateInt = setInterval(updateMeta, 1000);
+    onDestroy(() => {
+        clearInterval(updateInt);
+    });
 
     let metaLib: MetaLibrary | null = null;
-    onMount(() => {
-        const unsubscribe = metaLibStore.subscribe((value) => {
-            metaLib = value;
-        });
-
-        return () => {
-            unsubscribe();
-        };
+    metaLibStore.subscribe((value) => {
+        metaLib = value;
     });
 
     function navigateToPage(appName: string) {
@@ -191,11 +214,16 @@
     {#if $drawerStore.id === 'download-drawer'}
         <div class="flex flex-col justify-between h-screen">
             <DownloadDrawer></DownloadDrawer>
-            <button
-                type="button"
-                class="btn variant-filled w-20"
-                on:click={closeDownloadDrawer}>close</button
-            >
+            <div class="flex justify-between">
+                <div></div>
+                <button
+                    type="button"
+                    class="btn variant-filled-error w-20"
+                    on:click={closeDownloadDrawer}
+                >
+                    <Icon icon="lucide:arrow-left-to-line"></Icon>
+                </button>
+            </div>
         </div>
     {/if}
 </Drawer>
@@ -208,11 +236,18 @@
             >
                 <div>
                     <button
+                        class="flex"
                         on:click={() => {
                             selected = null;
                             goto('/');
                         }}
                     >
+                        <Icon
+                            icon="mdi:books"
+                            class="mr-4"
+                            width="36"
+                            height="36"
+                        />
                         <h2 class="h2">Library</h2>
                     </button>
                     <hr class="!border-t-4 my-2" />
@@ -221,6 +256,7 @@
                             {#each metaLib as app}
                                 <ListBoxItem
                                     bind:group={selected}
+                                    class="card my-2"
                                     name="medium"
                                     value={app.name}
                                     on:click={() => {

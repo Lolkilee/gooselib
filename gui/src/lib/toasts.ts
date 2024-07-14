@@ -25,3 +25,16 @@ export const logoutToast: ToastSettings = {
     hideDismiss: true,
     timeout: 2000
 }
+
+export const downloadCompeleteToast: ToastSettings = {
+    message: 'Download complete',
+    hideDismiss: true,
+    timeout: 2000
+}
+
+export const appRemovedToast: ToastSettings = {
+    message: 'Successfully removed app',
+    background: 'variant-filled-warning',
+    hideDismiss: true,
+    timeout: 2000
+}
