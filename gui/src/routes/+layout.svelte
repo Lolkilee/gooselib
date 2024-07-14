@@ -15,6 +15,10 @@
         Toast,
         AppShell,
         type ModalComponent,
+        ProgressRadial,
+        Drawer,
+        type DrawerSettings,
+        getDrawerStore,
     } from '@skeletonlabs/skeleton';
 
     import LoginModal from '$lib/loginModal.svelte';
@@ -28,20 +32,25 @@
         type MetaLibrary,
     } from '$lib/metadata';
 
-    import { metaLibStore } from '$lib/stores';
-    import { onDestroy } from 'svelte';
+    import { metaLibStore, selectedMetaStore } from '$lib/stores';
+    import { onDestroy, onMount } from 'svelte';
     import Icon from '@iconify/svelte';
+    import { goto } from '$app/navigation';
+    import DownloadDrawer from '$lib/DownloadDrawer.svelte';
 
     initializeStores();
 
     let clientProc: Child | null = null;
     let selected: MetaData | null = null;
+    let loaded = false;
 
     let appVersion: string = 'undefined';
 
     const BASE_URL = 'http://localhost:7123/';
     const modalStore = getModalStore();
     const toastStore = getToastStore();
+    const drawerStore = getDrawerStore();
+
     const modalRegistry: Record<string, ModalComponent> = {
         loginModal: { ref: LoginModal },
     };
@@ -69,8 +78,7 @@
         if (getMetaData() != null) {
             //@ts-ignore
             metaLibStore.set(getMetaData());
-            //@ts-ignore
-            if (selected == null) getMetaData()[0];
+            loaded = true;
         }
     }
 
@@ -87,32 +95,33 @@
                 resourcePath,
             ]);
             clientProc = await comm.spawn();
+            await new Promise((r) => setTimeout(r, 1000));
         }
 
-        await new Promise((r) => setTimeout(r, 1000));
+        if (sessionStorage.getItem('logged-in') == 'false') {
+            let attempt = false;
+            const savUser = localStorage.getItem('username');
+            const savPass = localStorage.getItem('password');
+            const ip = localStorage.getItem('ip');
 
-        let attempt = false;
-        const savUser = localStorage.getItem('username');
-        const savPass = localStorage.getItem('password');
-        const ip = localStorage.getItem('ip');
-
-        if (savUser && savPass && ip) {
-            attempt = await tryHandshake(savUser, savPass, ip);
-        }
-
-        if (!attempt) {
-            toastStore.trigger(loginCacheFail);
-            while (sessionStorage.getItem('logged-in') == 'false') {
-                if (sessionStorage.getItem('login-alive') == 'false') {
-                    modalStore.trigger(loginModalSettings);
-                }
-                await new Promise((r) => setTimeout(r, 100));
+            if (savUser && savPass && ip) {
+                attempt = await tryHandshake(savUser, savPass, ip);
             }
-        } else {
-            toastStore.trigger(loginSuccToast);
+
+            if (!attempt) {
+                toastStore.trigger(loginCacheFail);
+                while (sessionStorage.getItem('logged-in') == 'false') {
+                    if (sessionStorage.getItem('login-alive') == 'false') {
+                        modalStore.trigger(loginModalSettings);
+                    }
+                    await new Promise((r) => setTimeout(r, 100));
+                }
+            } else {
+                toastStore.trigger(loginSuccToast);
+            }
         }
 
-        const updateInt = setInterval(updateMeta, 10000);
+        const updateInt = setInterval(updateMeta, 100);
         onDestroy(() => {
             clearInterval(updateInt);
         });
@@ -130,46 +139,118 @@
         clearInterval(kaInt);
     });
 
-    let metaLib: MetaLibrary;
-    metaLibStore.subscribe((value) => {
-        metaLib = value;
+    let metaLib: MetaLibrary | null = null;
+    onMount(() => {
+        const unsubscribe = metaLibStore.subscribe((value) => {
+            metaLib = value;
+        });
+
+        return () => {
+            unsubscribe();
+        };
+    });
+
+    function navigateToPage(appName: string) {
+        const route = `/app/${appName}`;
+        goto(route);
+    }
+
+    function openDownloadDrawer() {
+        const sett: DrawerSettings = {
+            id: 'download-drawer',
+        };
+        drawerStore.open(sett);
+    }
+
+    function closeDownloadDrawer() {
+        drawerStore.close();
+    }
+
+    selectedMetaStore.subscribe((value) => {
+        selected = value;
     });
 </script>
 
 <Toast />
 <Modal components={modalRegistry} />
 
-<AppShell>
-    <svelte:fragment slot="sidebarLeft">
-        <div class="h-screen">
-            <div class="card p-4 h-full min-w-64 max-w-64 overflow-y-auto">
-                <h2 class="h2">Library</h2>
-                <hr class="!border-t-4 my-2" />
-                <ListBox>
-                    {#each metaLib as app}
-                        <ListBoxItem
-                            bind:group={selected}
-                            name="medium"
-                            value={app.name}
-                        >
-                            <div class="flex align-middle max-w-fit">
-                                <div class="py-1">
-                                    <Icon icon="mdi:application" />
-                                </div>
-                                <p class="px-4 truncate text-center">
-                                    {app.name}
-                                </p>
-                            </div>
-                        </ListBoxItem>
-                    {/each}
-                </ListBox>
-            </div>
+<Drawer>
+    {#if $drawerStore.id === 'download-drawer'}
+        <div class="flex flex-col justify-between h-screen">
+            <DownloadDrawer></DownloadDrawer>
+            <button
+                type="button"
+                class="btn variant-filled w-20"
+                on:click={closeDownloadDrawer}>close</button
+            >
         </div>
-    </svelte:fragment>
-    <svelte:fragment slot="pageFooter">
-        <p class="text-right text-slate-600">
-            Gooselib v{appVersion}
-        </p>
-    </svelte:fragment>
-    <slot />
-</AppShell>
+    {/if}
+</Drawer>
+
+<div class="h-screen w-screen">
+    <AppShell>
+        <svelte:fragment slot="sidebarLeft">
+            <div
+                class="card p-4 h-screen min-w-64 max-w-64 overflow-y-auto flex flex-col justify-between"
+            >
+                <div>
+                    <h2 class="h2">Library</h2>
+                    <hr class="!border-t-4 my-2" />
+                    {#if loaded && metaLib != null}
+                        <ListBox>
+                            {#each metaLib as app}
+                                <ListBoxItem
+                                    bind:group={selected}
+                                    name="medium"
+                                    value={app.name}
+                                    on:click={() => {
+                                        navigateToPage(app.name);
+                                    }}
+                                >
+                                    <div class="flex align-middle max-w-fit">
+                                        <div class="py-1">
+                                            <Icon icon="mdi:application" />
+                                        </div>
+                                        <p class="px-4 truncate text-center">
+                                            {app.name}
+                                        </p>
+                                    </div>
+                                </ListBoxItem>
+                            {/each}
+                        </ListBox>
+                    {:else}
+                        <div class="placeholder animate-pulse"></div>
+                    {/if}
+                </div>
+            </div>
+        </svelte:fragment>
+        <svelte:fragment slot="pageFooter">
+            <div class="flex justify-between">
+                <div class="mt-9 mx-6 mb-1">
+                    <button
+                        type="button"
+                        class="btn variant-filled"
+                        on:click={() => {
+                            navigateToPage('settings');
+                        }}
+                    >
+                        <Icon icon="mdi:settings" />
+                    </button>
+                    <button
+                        type="button"
+                        class="btn variant-filled"
+                        on:click={openDownloadDrawer}
+                    >
+                        <Icon icon="mdi:chart-line" />
+                    </button>
+                </div>
+                <p class="mt-12 text-right text-slate-600">
+                    Gooselib v{appVersion}
+                </p>
+            </div>
+        </svelte:fragment>
+        <div class="card m-6 p-6 h-full variant-soft">
+            <slot />
+        </div>
+    </AppShell>
+</div>
