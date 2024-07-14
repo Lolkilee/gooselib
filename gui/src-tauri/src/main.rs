@@ -25,6 +25,29 @@ fn start_exec(path: String) {
     let _ = Command::new(e_path).spawn();
 }
 
+#[tauri::command]
+fn open_path(path: String) {
+    // https://stackoverflow.com/questions/66485945/with-rust-open-explorer-on-a-file
+
+    println!("{}", path);
+
+    #[cfg(target_os = "macos")]
+    {
+        Command::new("open").arg(path).spawn().unwrap();
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        let win_path = str::replace(path.as_str(), "/", "\\");
+        Command::new("explorer").arg(win_path).spawn().unwrap();
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        Command::new("xdg-open").arg(path).spawn().unwrap();
+    }
+}
+
 fn main() {
     #[cfg(any(
         target_os = "linux",
@@ -47,7 +70,8 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             remove_dir,
             check_dir_exists,
-            start_exec
+            start_exec,
+            open_path
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
