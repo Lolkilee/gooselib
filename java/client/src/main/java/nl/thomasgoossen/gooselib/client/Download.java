@@ -152,7 +152,7 @@ public class Download {
     }
 
     public float progress() {
-        return ((float) chunkQ.size()) / ((float) totalChunkCount);
+        return 1.0f - ((float) chunkQ.size()) / ((float) totalChunkCount);
     }
 
     public boolean getDone() {
