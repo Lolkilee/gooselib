@@ -3,6 +3,8 @@ package nl.thomasgoossen.gooselib.client;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -148,10 +150,20 @@ public class GLClient {
 
     // Path should be formatted between [] brackets, and ! instead of /
     private static Javalin downloadHandler(Javalin app) {
-        return app.post("/download/{appIndex}/{dst}", ctx -> {
+        return app.post("/download/{appName}/{dst}", ctx -> {
             if (connection != null && metaData != null) {
                 String dst = ctx.pathParam("dst");
-                int appIndex = Integer.parseInt(ctx.pathParam("appIndex"));
+                String appName = ctx.pathParam("appName");
+
+                int appIndex = -1;
+                int i = 0;
+                for (AppMetaData meta : metaData) {
+                    if (meta.name.equals(appName)) {
+                        appIndex = i;
+                        break;
+                    }
+                    i++;
+                }
 
                 dst = dst.replace("[", "");
                 dst = dst.replace("]", "");
@@ -162,7 +174,10 @@ public class GLClient {
                     AppMetaData meta = metaData[appIndex];
                     Download d = new Download(meta, dst);
                     System.out.println("started download instance with name: "
-                        + d.getName());
+                            + d.getName());
+                    ctx.result("started download with name " + meta.name);
+                } else {
+                    ctx.result("could not start download");
                 }
             }
         });
@@ -176,11 +191,11 @@ public class GLClient {
 
     // Path should be formatted between [] brackets, and ! instead of /
     private static Javalin uploadHandler(Javalin app) {
-        return app.post("/upload/{path}/{name}/{version}", ctx -> {
+        return app.post("/upload/{path}/{name}", ctx -> {
             if (connection != null) {
                 String path = ctx.pathParam("path");
                 String name = ctx.pathParam("name");
-                String version = ctx.pathParam("version");
+                String version = new SimpleDateFormat("dd-MM HH:mm:ss").format(new Date());
 
                 path = path.replace("[", "");
                 path = path.replace("]", "");
@@ -198,7 +213,8 @@ public class GLClient {
                         Upload.upload(password, lPath, name, version);
                     }).start();
                 } else {
-                    ctx.result("path is not a folder");
+                    String absPath = Paths.get(lPath).toAbsolutePath().toString();
+                    ctx.result("path " + absPath + " is not a folder");
                 }
             } else {
                 ctx.result("connection not initialized");
