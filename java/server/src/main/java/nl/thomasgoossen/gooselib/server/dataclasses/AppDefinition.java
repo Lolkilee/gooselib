@@ -16,7 +16,7 @@ public class AppDefinition implements Serializable {
 
     private String curVersion;
     private final String chunksPath;
-    private final ArrayList<String> chunks; // stores paths of files
+    private int chunks = 0;
     private long bytesCount = 0;
 
     private volatile boolean isPublic = true;
@@ -25,7 +25,6 @@ public class AppDefinition implements Serializable {
         this.name = name;
         this.chunksPath = APPS_FOLDER + name + "/";
         this.curVersion = version;
-        this.chunks = new ArrayList<>();
 
         if (!Files.exists(Paths.get(chunksPath))) {
             try {
@@ -37,18 +36,18 @@ public class AppDefinition implements Serializable {
     }
 
     public void appendChunk(byte[] chunk) {
-        String path = chunksPath + chunks.size() + ".bin";
+        String path = chunksPath + chunks + ".bin";
         try {
             Files.write(Paths.get(path), chunk);
             bytesCount += chunk.length;
         } catch (IOException e) {
             Logger.err(e.getMessage());
         }
-        this.chunks.add(path);
+        chunks++;
     }
 
     public byte[] getChunk(int i) {
-        String path = chunks.get(i);
+        String path = chunksPath + i + ".bin";
         byte[] c;
         try {
             c = Files.readAllBytes(Paths.get(path));
@@ -61,7 +60,7 @@ public class AppDefinition implements Serializable {
     }
 
     public int getChunkCount() {
-        return chunks.size();
+        return chunks;
     }
 
     public void setVersion(String v) {
@@ -74,8 +73,9 @@ public class AppDefinition implements Serializable {
 
     public void deleteFiles() {
         Logger.warn("deleteChunks() called for AppDef " + name);
-        for (String p : chunks) {
+        for (int i = 0; i < chunks; i++) {
             try {
+                String p = chunksPath + i + ".bin";
                 Files.delete(Paths.get(p));
             } catch (IOException e) {
                 Logger.err(e.getMessage());
@@ -89,8 +89,9 @@ public class AppDefinition implements Serializable {
     }
 
     public boolean checkIntegrity() {
-        for (String p : chunks) {
-            if(!Files.exists(Paths.get(p)))
+        for (int i = 0; i < chunks; i++) {
+            String p = chunksPath + i + ".bin";
+            if (!Files.exists(Paths.get(p)))
                 return false;
         }
 
@@ -101,14 +102,14 @@ public class AppDefinition implements Serializable {
     public ArrayList<byte[]> allChunks() {
         Logger.warn("allChunks() called for AppDef " + name);
         ArrayList<byte[]> arr = new ArrayList<>();
-        for (int i = 0; i < chunks.size(); i++) {
+        for (int i = 0; i < chunks; i++) {
             arr.add(getChunk(i));
         }
         return arr;
     }
 
     public AppMetaData getMetaData() {
-        return new AppMetaData(this.name, this.curVersion, this.chunks.size(), this.bytesCount);
+        return new AppMetaData(this.name, this.curVersion, this.chunks, this.bytesCount);
     }
 
     public void setIsPublic(boolean val) {
