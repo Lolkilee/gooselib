@@ -3,6 +3,7 @@
 
     const themes = [
         'skeleton',
+        'material',
         'wintry',
         'modern',
         'rocket',
@@ -39,15 +40,6 @@
 <h1 class="h1 mb-12">Settings</h1>
 
 <div class="flex justify-between my-2">
-    <h5 class="h5 ml-4">Theme</h5>
-    <select class="select w-2/3" bind:value={selectedTheme}>
-        {#each themes as theme}
-            <option value={theme}>{theme}</option>
-        {/each}
-    </select>
-</div>
-
-<div class="flex justify-between my-2">
     <h5 class="h5 ml-4">Install folder</h5>
     <div class="flex w-2/3">
         <input
@@ -63,4 +55,13 @@
             on:click={setInstallFolder}>Browse</button
         >
     </div>
+</div>
+
+<div class="flex justify-between my-2">
+    <h5 class="h5 ml-4">Theme</h5>
+    <select class="select w-2/3" bind:value={selectedTheme}>
+        {#each themes as theme}
+            <option value={theme}>{theme}</option>
+        {/each}
+    </select>
 </div>

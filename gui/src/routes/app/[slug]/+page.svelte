@@ -75,6 +75,12 @@
         });
     }
 
+    async function startExecPath() {
+        await invoke('start_exec', {
+            path: data.installPath + '/' + data.metaData?.execPath,
+        });
+    }
+
     const iV = localStorage.getItem('installed-ver-' + data.slug);
     if (iV != null) inst = true;
     checkIfInstalled();
@@ -85,7 +91,12 @@
     <div>
         <h1 class="h1 mb-10">{data.slug}</h1>
         {#if installed && !needsUpdate}
-            <button class="btn variant-filled-primary mb-10 mx-3">Run</button>
+            {#if data.metaData?.execPath != null && data.metaData?.execPath != undefined}
+                <button
+                    class="btn variant-filled-primary mb-10 mx-3"
+                    on:click={startExecPath}>Run</button
+                >
+            {/if}
             <button class="btn variant-filled mb-10 mx-3" on:click={openFolder}
                 >Open</button
             >
@@ -112,12 +123,19 @@
         <p class="text-slate-400">
             Latest version: {data.metaData?.latestVersion}
         </p>
-        <p class="text-slate-400">Install folder: {data.installPath}</p>
         <p class="text-slate-400">
             App size (compressed): {data.metaData?.bytesCount} bytes ({formatBytes(
                 data.metaData?.bytesCount,
                 2
             )})
         </p>
+        <p class="text-slate-400">Install folder: {data.installPath}</p>
+        {#if data.metaData?.execPath != null && data.metaData?.execPath != undefined}
+            <p class="text-slate-400">
+                Executable path: {data.installPath +
+                    '/' +
+                    data.metaData?.execPath}
+            </p>
+        {/if}
     </div>
 </div>

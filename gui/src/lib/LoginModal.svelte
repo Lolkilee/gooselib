@@ -36,6 +36,7 @@
         if (succ) {
             modalStore.close();
             sessionStorage.setItem('logged-in', 'true');
+            sessionStorage.setItem('login-alive', 'false');
             toastStore.trigger(loginSuccToast);
         } else {
             toastStore.trigger(loginErrToast);
