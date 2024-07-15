@@ -20,6 +20,7 @@ import nl.thomasgoossen.gooselib.shared.messages.HandshakeReq;
 import nl.thomasgoossen.gooselib.shared.messages.HandshakeResp;
 import nl.thomasgoossen.gooselib.shared.messages.LibInfoReq;
 import nl.thomasgoossen.gooselib.shared.messages.LibInfoResp;
+import nl.thomasgoossen.gooselib.shared.messages.SetExecPathReq;
 import nl.thomasgoossen.gooselib.shared.messages.ShutdownReq;
 import nl.thomasgoossen.gooselib.shared.messages.UploadCompleteMsg;
 import nl.thomasgoossen.gooselib.shared.messages.UploadReq;
@@ -122,6 +123,11 @@ public class NetworkingListener extends Listener {
                         LibInfoResp resp = new LibInfoResp(appData);
                         EncryptedPacket p = new EncryptedPacket(resp, encKey);
                         conn.sendTCP(p);
+                    }
+                }
+                case SetExecPathReq req -> {
+                    if (Database.auth("admin", req.getAdminPass())) {
+                        Database.setExecPath(req.appName, req.execPath);
                     }
                 }
                 default -> Logger.warn("deserialized data was not recognized by onRequest()");

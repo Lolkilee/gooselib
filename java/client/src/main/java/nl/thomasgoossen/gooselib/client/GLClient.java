@@ -18,6 +18,7 @@ import io.javalin.Javalin;
 import nl.thomasgoossen.gooselib.shared.AppMetaData;
 import nl.thomasgoossen.gooselib.shared.messages.HandshakeResp;
 import nl.thomasgoossen.gooselib.shared.messages.LibInfoReq;
+import nl.thomasgoossen.gooselib.shared.messages.SetExecPathReq;
 
 public class GLClient {
     private static final int PORT = 7123;
@@ -47,6 +48,7 @@ public class GLClient {
         app = uploadStatusHandler(app);
         app = metaDataHandler(app);
         app = connectionStatusHandler(app);
+        app = setExecPathHandler(app);
         app.start(PORT);
 
         Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -251,12 +253,29 @@ public class GLClient {
     private static Javalin connectionStatusHandler(Javalin app) {
         return app.get("/connection", ctx -> {
             boolean b = (connection != null);
-            if(!b)
+            if (!b)
                 ctx.json(new ConnectionStatus(b));
             else
                 ctx.json(new ConnectionStatus(connection.isConnected()));
         });
-    } 
+    }
+    
+    private static Javalin setExecPathHandler(Javalin app) {
+        return app.post("/set-exec-path/{appName}/{path}/{adminPass}", ctx -> {
+            String appName = ctx.pathParam("appName");
+            String path = ctx.pathParam("path");
+            String adminPass = ctx.pathParam("adminPass");
+            path = path.replace("[", "");
+            path = path.replace("]", "");
+            path = path.replace("!", "/");
+            System.out.println(appName);
+            System.out.println(path);
+            System.out.println(adminPass);
+            SetExecPathReq req = new SetExecPathReq(appName, path, adminPass);
+            sendPacketTCP(req);
+            ctx.result("sent request");
+        });
+    }
 
     public static void sendPacketTCP(Object data) {
         if (connection != null) {

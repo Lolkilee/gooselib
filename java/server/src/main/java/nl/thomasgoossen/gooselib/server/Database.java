@@ -296,4 +296,17 @@ public class Database {
         }
         return arr;
     }
+
+    /**
+     * Sets the optional field of execPath for a given app
+     * @param appName name of app
+     * @param execPath path of executable
+     */
+    public static void setExecPath(String appName, String execPath) {
+        if (appExists(appName)) {
+            AppDefinition def = appMap.get(appName);
+            def.setExecPath(execPath);
+            appMap.put(appName, def);
+        }
+    }
 }
