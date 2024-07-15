@@ -15,6 +15,7 @@ public class AppDefinition implements Serializable {
     public final String name;
 
     private String curVersion;
+    private String execPath;
     private final String chunksPath;
     private int chunks = 0;
     private long bytesCount = 0;
@@ -109,7 +110,8 @@ public class AppDefinition implements Serializable {
     }
 
     public AppMetaData getMetaData() {
-        return new AppMetaData(this.name, this.curVersion, this.chunks, this.bytesCount);
+        return new AppMetaData(this.name, this.curVersion,
+                this.execPath, this.chunks, this.bytesCount);
     }
 
     public void setIsPublic(boolean val) {
@@ -118,5 +120,13 @@ public class AppDefinition implements Serializable {
 
     public boolean getIsPublic() {
         return isPublic;
+    }
+
+    public String getExecPath() {
+        return execPath;
+    }
+
+    public void setExecPath(String execPath) {
+        this.execPath = execPath;
     }
 }
