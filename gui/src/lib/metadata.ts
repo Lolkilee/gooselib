@@ -6,6 +6,7 @@ export type MetaLibrary = MetaData[]
 export interface MetaData {
     name: string
     latestVersion: string
+    execPath: string
     chunkCount: number
     bytesCount: number
 }

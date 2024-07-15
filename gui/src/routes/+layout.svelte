@@ -92,7 +92,10 @@
 
     async function updateMeta() {
         await cacheMetaData();
-        if (getMetaData() != null) {
+        if (
+            getMetaData() != null &&
+            !(sessionStorage.getItem('login-alive') == 'true')
+        ) {
             //@ts-ignore
             metaLibStore.set(getMetaData());
         }
@@ -166,6 +169,7 @@
             sessionStorage.setItem('logged-in', 'false');
             sessionStorage.setItem('login-alive', 'false');
             toastStore.trigger(logoutToast);
+            metaLibStore.set([]);
             loginProcess(false);
         }
     }
@@ -204,6 +208,7 @@
 
     selectedMetaStore.subscribe((value) => {
         selected = value;
+        console.log(selected);
     });
 </script>
 
@@ -258,7 +263,7 @@
                                     bind:group={selected}
                                     class="card my-2"
                                     name="medium"
-                                    value={app.name}
+                                    value={app}
                                     on:click={() => {
                                         navigateToPage(app.name);
                                     }}

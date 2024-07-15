@@ -22,6 +22,7 @@ fn start_exec(path: String) {
     {
         e_path = str::replace(e_path.as_str(), "/", "\\");
     }
+    println!("{}", e_path);
     let _ = Command::new(e_path).spawn();
 }
 
