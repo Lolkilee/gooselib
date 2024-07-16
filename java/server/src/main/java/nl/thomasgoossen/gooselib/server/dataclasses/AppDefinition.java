@@ -25,17 +25,18 @@ public class AppDefinition implements Serializable {
     private final int chunkSize;
     private long bytesCount = 0;
 
-    private volatile boolean isPublic = true;
-
     private transient FileOutputStream outStream = null;
     private transient RandomAccessFile inFile = null;
     private transient FileChannel inChannel = null;
+
+    private transient volatile boolean readMode = true;
 
     public AppDefinition(String name, String version, int chunkSize) {
         this.name = name;
         this.chunksPath = APPS_FOLDER + name + ".bin";
         this.curVersion = version;
         this.chunkSize = chunkSize;
+        this.readMode = true;
 
         if (!Files.exists(Paths.get(APPS_FOLDER))) {
             try {
@@ -47,6 +48,7 @@ public class AppDefinition implements Serializable {
     }
 
     public void appendChunk(byte[] chunk) throws IOException {
+        readMode = false;
         if (inChannel != null) {
             inChannel.close();
             inChannel = null;
@@ -66,16 +68,9 @@ public class AppDefinition implements Serializable {
     }
 
     public byte[] getChunk(int i) throws IOException {
-        if (outStream != null) {
-            outStream.close();
-            outStream = null;
-        }
-
-        if (inFile == null) {
+        disableWrites();
+        if (inFile == null || inChannel == null) {
             inFile = new RandomAccessFile(chunksPath, "r");
-        }
-
-        if (inChannel == null) {
             inChannel = inFile.getChannel();
         }
 
@@ -137,12 +132,15 @@ public class AppDefinition implements Serializable {
                 this.execPath, getChunkCount(), this.bytesCount);
     }
 
-    public void setIsPublic(boolean val) {
-        this.isPublic = val;
+    public void disableWrites() {
+        readMode = true;
     }
 
     public boolean getIsPublic() {
-        return isPublic;
+        if (outStream == null)
+            readMode = true;
+
+        return readMode;
     }
 
     public String getExecPath() {

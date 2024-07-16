@@ -52,8 +52,7 @@ public class UploadBuffer {
                 if (i == lastAppended + 1) {
                     Database.appendChunk(name, buffer.get(bufIndex));
                     lastAppended = i;
-                } else
-                    break;
+                }
             }
 
             Logger.dbg("lA: " + lastAppended + ", first: " + indices.getFirst());
@@ -68,7 +67,7 @@ public class UploadBuffer {
         if (buffer.isEmpty() && toRecv.isEmpty()) {
             Logger.log("writes finished, scheduler shutting down...");
             scheduler.shutdown();
-            Database.setAppPublic(name, true);
+            Database.disableAppWrite(name);
         }
     }
 

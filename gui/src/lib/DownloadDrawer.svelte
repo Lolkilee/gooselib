@@ -6,6 +6,10 @@
     let downloads: DownloadInfo[] = [];
 
     $: infos = downloads;
+
+    downloadInfoStore.subscribe((val) => {
+        downloads = val;
+    });
 </script>
 
 <div class="p-8">
