@@ -72,14 +72,14 @@ public class NetworkingListener extends Listener {
                 case ChunkReq req -> {
                     byte[] c = Database.getChunk(req.appName, req.index);
                     ChunkResp resp = new ChunkResp(req.appName, req.index, c);
-                    EncryptedPacket p = new EncryptedPacket(resp, encKey);
+                    EncryptedPacket p = new EncryptedPacket(resp);
                     Logger.dbg("sending chunk " + req.index + " for app " + req.appName);
                     conn.sendUDP(p);
                 }
                 case UploadReq req -> {
                     if (Database.auth("admin", req.getAdminPass())) {
                         Logger.log("upload req recv, sending chunk upload requests");
-                        Database.createOrClearApp(req.appName, req.version);
+                        Database.createOrClearApp(req.appName, req.version, req.chunkSize);
                         Database.setAppPublic(req.appName, false);
                         uploadBuffers.put(req.appName, new UploadBuffer(req.appName, req.chunkCount));
                         expectedLists.put(req.appName, new ArrayList<>());
@@ -95,7 +95,6 @@ public class NetworkingListener extends Listener {
                         Logger.dbg("chunk recv, size " + resp.chunk.length + ", index " + resp.index);
                         UploadBuffer buff = uploadBuffers.get(resp.appName);
                         buff.addToBuffer(resp.index, resp.chunk);
-                        buff.pushBuffer();
 
                         ArrayList<Integer> expected = expectedLists.get(resp.appName);
                         if (expected.contains(resp.index))
@@ -107,12 +106,10 @@ public class NetworkingListener extends Listener {
                             EncryptedPacket p = new EncryptedPacket(new ChunkUploadReq(resp.appName, next), encKey);
                             conn.sendUDP(p);
                         } else {
-                            Logger.log("upload buffer completed, cleaning up...");
-                            uploadBuffers.remove(resp.appName);
+                            Logger.log("all upload chunks received");
                             UploadCompleteMsg msg = new UploadCompleteMsg(buff.totalCount);
                             EncryptedPacket p = new EncryptedPacket(msg, encKey);
                             conn.sendTCP(p);
-                            Database.setAppPublic(resp.appName, true);
                         }
                     }
                 }

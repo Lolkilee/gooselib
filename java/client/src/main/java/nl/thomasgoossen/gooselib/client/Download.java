@@ -23,6 +23,7 @@ import nl.thomasgoossen.gooselib.shared.messages.ChunkReq;
 
 public class Download {
     private final static String DL_FILE = "./temp.tar.gz";
+    private final static int BUFF_TRESH = 50;
 
     private final static HashMap<String, Download> instances = new HashMap<>();
 
@@ -141,6 +142,9 @@ public class Download {
 
     public void addChunk(int index, byte[] bytes) {
         chunksBuff.put(index, bytes);
+        chunkQ.remove(chunkQ.indexOf(index));
+        if (chunksBuff.keySet().size() >= BUFF_TRESH || chunkQ.size() < 1) 
+            pushBuffer();
     }
 
     public int next() {
@@ -174,7 +178,6 @@ public class Download {
             Download d = instances.get(name);
             d.tThread.updateRecv();
             d.addChunk(index, bytes);
-            d.pushBuffer();
         }
     }
 
