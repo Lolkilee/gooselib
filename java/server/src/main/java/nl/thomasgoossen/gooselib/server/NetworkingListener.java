@@ -80,7 +80,6 @@ public class NetworkingListener extends Listener {
                     if (Database.auth("admin", req.getAdminPass())) {
                         Logger.log("upload req recv, sending chunk upload requests");
                         Database.createOrClearApp(req.appName, req.version, req.chunkSize);
-                        Database.setAppPublic(req.appName, false);
                         uploadBuffers.put(req.appName, new UploadBuffer(req.appName, req.chunkCount));
                         expectedLists.put(req.appName, new ArrayList<>());
                         expectedLists.get(req.appName).add(0);

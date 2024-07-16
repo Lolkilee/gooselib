@@ -1,10 +1,11 @@
 <script lang="ts">
-    import { sendDownloadReq } from '$lib/download.js';
+    import { sendDownloadReq, type DownloadInfo } from '$lib/download.js';
     import { getAppMetaData } from '$lib/metadata.js';
     import {
         triggerRemoveAppModal,
         triggerUpdateAppModal,
     } from '$lib/modals.js';
+    import { downloadInfoStore } from '$lib/stores.js';
     import { formatBytes } from '$lib/util';
     import { getModalStore, getToastStore } from '@skeletonlabs/skeleton';
     import { invoke } from '@tauri-apps/api';
@@ -16,9 +17,24 @@
 
     let inst = false;
     let updt = false;
+    let downloadInfos: DownloadInfo[] = [];
+    let downloadingState = false;
 
     $: installed = inst;
     $: needsUpdate = updt;
+    $: downloading = downloadingState;
+
+    downloadInfoStore.subscribe((val) => {
+        downloadInfos = val;
+        downloadingState = isDownloading();
+    });
+
+    function isDownloading(): boolean {
+        for (let i = 0; i < downloadInfos.length; i++) {
+            if (downloadInfos[i].appName == data.metaData?.name) return true;
+        }
+        return false;
+    }
 
     async function checkIfInstalled() {
         await invoke('check_dir_exists', {
@@ -110,6 +126,10 @@
                 class="btn variant-filled-warning mb-10"
                 on:click={updateStart}>Update</button
             >
+        {:else if downloading}
+            <button class="btn variant-filled-primary mb-10"
+                >Downloading...</button
+            >
         {:else}
             <button
                 class="btn variant-filled-primary mb-10"
@@ -124,10 +144,7 @@
             Latest version: {data.metaData?.latestVersion}
         </p>
         <p class="text-slate-400">
-            App size (compressed): {data.metaData?.bytesCount} bytes ({formatBytes(
-                data.metaData?.bytesCount,
-                2
-            )})
+            App size (compressed): ({formatBytes(data.metaData?.bytesCount, 2)})
         </p>
         <p class="text-slate-400">Install folder: {data.installPath}</p>
         {#if data.metaData?.execPath != null && data.metaData?.execPath != undefined}

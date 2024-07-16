@@ -252,16 +252,12 @@ public class Database {
     }
 
     /**
-     * Sets the isPublic boolean for an app if it exists
+     * Disables the app write stream and opens the read stream
      * @param name app name
-     * @param val value to set isPublic to
      */
-    public static void setAppPublic(String name, boolean val) {
-        if (appMap.containsKey(name)) {
-            AppDefinition a = appMap.get(name);
-            a.setIsPublic(val);
-            appMap.put(name, a);
-        }
+    public static void disableAppWrite(String name) {
+        if (appMap.containsKey(name))
+            appMap.get(name).disableWrites();
     }
 
     /**

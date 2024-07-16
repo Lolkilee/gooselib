@@ -13,6 +13,10 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
@@ -23,20 +27,23 @@ import nl.thomasgoossen.gooselib.shared.messages.ChunkReq;
 
 public class Download {
     private final static String DL_FILE = "./temp.tar.gz";
-    private final static int BUFF_TRESH = 50;
 
     private final static HashMap<String, Download> instances = new HashMap<>();
 
     private final int totalChunkCount;
     private final ArrayList<Integer> chunkQ;
-    private final HashMap<Integer, byte[]> chunksBuff;
+    private final List<byte[]> buffer;
+    private final List<Integer> indices;
     private final FileOutputStream fos;
     private final String path;
     private final String folder;
     private final String appName;
     private final TimeoutThread tThread;
+    
+    private final ScheduledExecutorService scheduler;
+    private volatile boolean pushActive = false;
 
-    private int lastAppended = -1;
+    private volatile int lastAppended = -1;
     private volatile boolean done = false;
 
     public Download(AppMetaData meta, String folder) throws FileNotFoundException {
@@ -44,7 +51,10 @@ public class Download {
         this.totalChunkCount = meta.chunkCount;
         this.folder = folder;
         chunkQ = new ArrayList<>();
-        chunksBuff = new HashMap<>();
+        buffer = Collections.synchronizedList(new ArrayList<>());
+        indices = Collections.synchronizedList(new ArrayList<>());;
+        this.scheduler = Executors.newScheduledThreadPool(1);
+
         path = DL_FILE.replace("temp", meta.name);
         fos = new FileOutputStream(path);
         for (int i = 0; i < meta.chunkCount; i++) {
@@ -66,47 +76,42 @@ public class Download {
     }
     
     private void pushBuffer() {
-        if (!chunksBuff.keySet().isEmpty()) {
-            ArrayList<Integer> toRemove = new ArrayList<>();
-            ArrayList<Integer> keys = new ArrayList<>(chunksBuff.keySet());
-            Collections.sort(keys);
-
-            for (int i : keys) {
-                if (i == lastAppended + 1) {
-                    toRemove.add(i);
-                    lastAppended = i;
-                    try {
-                        fos.write(chunksBuff.get(i));
-                    } catch (IOException e) {
-                        System.out.println(e.getMessage());
-                    }
-                } else if (i > lastAppended + 1) 
-                    break;
-                else
-                    toRemove.add(i);
-            }
-            
-            for (int i : toRemove) {
-                if (chunkQ.contains(i))
-                    chunkQ.remove(chunkQ.indexOf(i));
-                if (chunksBuff.containsKey(i))
-                    chunksBuff.remove(i);
-            }
-
-            // Download is done, decompress and finalize
-            if (chunkQ.isEmpty()) {
+        for (int bufIndex = 0; bufIndex < buffer.size(); bufIndex++) {
+            int i = indices.get(bufIndex);
+            if (i == lastAppended + 1) {
                 try {
-                    fos.close();
-                    decompress(path, folder);
-                    done = true;
-                    System.out.println("finished download for " + appName);
-                    tThread.stop();
-                    instances.remove(appName);
-                    File f = new File(path);
-                    f.delete();
+                    fos.write(buffer.get(i));
                 } catch (IOException e) {
                     System.out.println(e.getMessage());
                 }
+                lastAppended = i;
+            } else if (!indices.contains(lastAppended + 1))
+                break;
+        }
+
+        System.out.println(lastAppended + " | " + chunkQ.getFirst());
+
+        for (int i = 0; i < buffer.size(); i++) {
+            if (indices.get(i) <= lastAppended) {
+                buffer.remove(i);
+                indices.remove(i);
+            }
+        }
+
+        // Download is done, decompress and finalize
+        if (buffer.isEmpty() && chunkQ.isEmpty()) {
+            System.out.println("finished download for " + appName);
+            try {
+                fos.close();
+                decompress(path, folder);
+                done = true;
+                tThread.stop();
+                instances.remove(appName);
+                File f = new File(path);
+                f.delete();
+                scheduler.shutdown();
+            } catch (IOException e) {
+                System.out.println(e.getMessage());
             }
         }
     }
@@ -127,10 +132,10 @@ public class Download {
                 } else {
                     Files.createDirectories(outputPath.getParent());
                     try (OutputStream os = Files.newOutputStream(outputPath)) {
-                        byte[] buffer = new byte[1024];
+                        byte[] buff = new byte[1024];
                         int len;
-                        while ((len = tais.read(buffer)) != -1) {
-                            os.write(buffer, 0, len);
+                        while ((len = tais.read(buff)) != -1) {
+                            os.write(buff, 0, len);
                         }
                     }
                 }
@@ -141,10 +146,23 @@ public class Download {
     }
 
     public void addChunk(int index, byte[] bytes) {
-        chunksBuff.put(index, bytes);
+        buffer.add(bytes);
+        indices.add(index);
+
         chunkQ.remove(chunkQ.indexOf(index));
-        if (chunksBuff.keySet().size() >= BUFF_TRESH || chunkQ.size() < 1) 
-            pushBuffer();
+
+        if (!pushActive) {
+            scheduler.scheduleAtFixedRate(() -> {
+                pushBuffer();
+            }, 1000, 1000, TimeUnit.MILLISECONDS);
+            pushActive = true;
+        }
+    }
+    
+    public static void kill() {
+        for (Download inst : instances.values()) {
+            inst.scheduler.shutdown();
+        }
     }
 
     public int next() {

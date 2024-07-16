@@ -22,13 +22,13 @@ import nl.thomasgoossen.gooselib.shared.messages.SetExecPathReq;
 
 public class GLClient {
     private static final int PORT = 7123;
-    private static final int TIMEOUT = 10000;
+    private static final int TIMEOUT = 2000;
 
     private static AppMetaData[] metaData = null;
     private static volatile boolean metaSignal = false;
 
-    private static String username = "user";
-    private static String password = "password";
+    private static String username;
+    private static String password;
 
     private static ConnectionInstance connection;
     private static volatile long lastReq;
@@ -57,6 +57,8 @@ public class GLClient {
                 System.out.println("running shutdown hook");
                 if (connection != null)
                     connection.stop();
+
+                Download.kill();
             }
         });
 
@@ -124,7 +126,7 @@ public class GLClient {
 
     private static Javalin handshakeHandler(Javalin app) {
         return app.post("/handshake/{ip}", ctx -> {
-            if (!Handshake.isHandshaking) {
+            if (!Handshake.isHandshaking && username != null && password != null) {
                 if (connection != null) {
                     connection.stop();
                 }

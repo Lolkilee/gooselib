@@ -48,7 +48,7 @@ public class ConnectionInstance {
                 int next = Download.nextChunk(resp.appName);
                 if (next >= 0 && !Download.isDone(resp.appName)) {
                     ChunkReq req = new ChunkReq(resp.appName, next);
-                    sendPacketUDP(req);
+                    sendPlainPacketUDP(req);
                 }
             }
             default -> {
