@@ -41,4 +41,16 @@ public class EncryptionHelperTest {
             assertArrayEquals(og, test);
         }
     }
+
+    @Test
+    public void testEncryptionSpeed() {
+        byte[] data = new byte[1024];
+        new Random().nextBytes(data);
+        SecretKey key = EncryptionHelper.generateKey();
+        long before = System.currentTimeMillis();
+        byte[] arr = EncryptionHelper.encrypt(data, key);
+        long after = System.currentTimeMillis();
+        System.out.println("Encryption took: " + (after - before) + " ms");
+        assertArrayEquals(data, EncryptionHelper.decrypt(arr, key));
+    }
 }

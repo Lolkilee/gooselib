@@ -35,7 +35,7 @@ public class Upload {
         File f = new File(UPLOAD_FILE);
         int chunkCount = (int) Math.ceil((double) f.length() / CHUNK_SIZE);
         System.out.println("chunks: " + chunkCount);
-        UploadReq req = new UploadReq(password, name, version, chunkCount);
+        UploadReq req = new UploadReq(password, name, version, chunkCount, CHUNK_SIZE);
         GLClient.sendPacketTCP(req);
         status = "uploading";
     }

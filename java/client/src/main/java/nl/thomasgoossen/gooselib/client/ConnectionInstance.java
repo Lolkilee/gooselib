@@ -31,7 +31,7 @@ public class ConnectionInstance {
                     ChunkUploadResp resp = new ChunkUploadResp(
                             Upload.getCurUploadName(),
                             req.index, chunk);
-                    GLClient.sendPacketUDP(resp);
+                    sendPlainPacketUDP(resp);
                 }
             }
             case UploadCompleteMsg msg -> {
@@ -48,7 +48,7 @@ public class ConnectionInstance {
                 int next = Download.nextChunk(resp.appName);
                 if (next >= 0 && !Download.isDone(resp.appName)) {
                     ChunkReq req = new ChunkReq(resp.appName, next);
-                    GLClient.sendPacketTCP(req);
+                    sendPacketUDP(req);
                 }
             }
             default -> {
@@ -80,6 +80,16 @@ public class ConnectionInstance {
 
     public void stop() {
         client.stop();
+    }
+
+    public void sendPlainPacketTCP(Object data) {
+        EncryptedPacket p = new EncryptedPacket(data);
+        client.sendTCP(p);
+    }
+
+    public void sendPlainPacketUDP(Object data) {
+        EncryptedPacket p = new EncryptedPacket(data);
+        client.sendUDP(p);
     }
 
     public void sendPacketTCP(Object data) {

@@ -218,9 +218,13 @@ public class Database {
     public static void appendChunk(String name, byte[] chunk) {
         if (appMap.containsKey(name)) {
             AppDefinition def = appMap.get(name);
-            def.appendChunk(chunk);
-            appMap.put(name, def);
-            Logger.dbg("appended a chunk of size " + chunk.length + " to " + name);
+            try {
+                def.appendChunk(chunk);
+                appMap.put(name, def);
+                Logger.dbg("appended a chunk of size " + chunk.length + " to " + name);
+            } catch (IOException e) {
+                Logger.err("error appending; " + e.getMessage());
+            }
         } else {
             Logger.warn("tried to append to key '" + name + "', which is not present in DB");
         }
@@ -239,9 +243,12 @@ public class Database {
      * Puts a new app in the appdefinition database
      * @param name name of the app
      * @param version version of the app
+     * @param chunkSize size of each chunk in app (except last chunk)
      */
-    public static void createOrClearApp(String name, String version) {
-        appMap.put(name, new AppDefinition(name, version));
+    public static void createOrClearApp(String name, String version, int chunkSize) {
+        if (appMap.containsKey(name))
+            appMap.get(name).deleteFiles();
+        appMap.put(name, new AppDefinition(name, version, chunkSize));
     }
 
     /**
@@ -279,7 +286,11 @@ public class Database {
      */
     public static byte[] getChunk(String name, int index) {
         if (appMap.containsKey(name) && index < appMap.get(name).getChunkCount()) {
-            return appMap.get(name).getChunk(index);
+            try {
+                return appMap.get(name).getChunk(index);
+            } catch (IOException e) {
+                Logger.err("error retrieving chunk; " + e.getMessage());
+            }
         }
         return null;
     }

@@ -20,7 +20,7 @@ public class UploadBufferTest {
         createTestDatabase();
         ArrayList<byte[]> data = generateRandomData();
 
-        Database.createOrClearApp("test", "testver");
+        Database.createOrClearApp("test", "testver", CHUNK_SIZE);
         UploadBuffer buff = new UploadBuffer("test", data.size());
 
         int next = buff.next(new ArrayList<>());
@@ -42,7 +42,7 @@ public class UploadBufferTest {
         ArrayList<byte[]> data = generateRandomData();
 
         Random r = new Random();
-        Database.createOrClearApp("test", "testver");
+        Database.createOrClearApp("test", "testver", CHUNK_SIZE);
         UploadBuffer buff = new UploadBuffer("test", data.size());
 
         while (!buff.isDone()) {
