@@ -9,6 +9,9 @@ public class LibInfoResp implements Serializable {
     public final AppMetaData[] apps;
 
     public LibInfoResp(ArrayList<AppMetaData> arr) {
-        apps = arr.toArray(AppMetaData[]::new);
+        apps = new AppMetaData[arr.size()];
+        for (int i = 0; i < arr.size(); i++) {
+            apps[i] = arr.get(i);
+        }
     }
 }

@@ -24,36 +24,34 @@ public class ConnectionInstance {
     private final SecretKey key;
 
     private void dataSwitch(Object data) {
-        switch (data) {
-            case ChunkUploadReq req -> {
-                if (req.appName.equals(Upload.getCurUploadName())) {
-                    byte[] chunk = Upload.getChunk(req.index);
-                    ChunkUploadResp resp = new ChunkUploadResp(
-                            Upload.getCurUploadName(),
-                            req.index, chunk);
-                    sendPlainPacketUDP(resp);
-                }
+        if (data instanceof ChunkUploadReq) {
+            ChunkUploadReq req = (ChunkUploadReq) data;
+            if (req.appName.equals(Upload.getCurUploadName())) {
+                byte[] chunk = Upload.getChunk(req.index);
+                ChunkUploadResp resp = new ChunkUploadResp(
+                        Upload.getCurUploadName(),
+                        req.index, chunk);
+                sendPlainPacketUDP(resp);
             }
-            case UploadCompleteMsg msg -> {
-                System.out.println("upload complete, server wrote "
-                        + msg.chunksWritten + " chunks");
-                Upload.done();
+        } else if (data instanceof UploadCompleteMsg) {
+            UploadCompleteMsg msg = (UploadCompleteMsg) data;
+            System.out.println("upload complete, server wrote "
+                    + msg.chunksWritten + " chunks");
+            Upload.done();
+        } else if (data instanceof LibInfoResp) {
+            LibInfoResp resp = (LibInfoResp) data;
+            GLClient.setMetaData(resp.apps);
+            GLClient.setMetaSignal();
+        } else if (data instanceof ChunkResp) {
+            ChunkResp resp = (ChunkResp) data;
+            Download.recvBytes(resp.cIndex, resp.data, resp.appName);
+            int next = Download.nextChunk(resp.appName);
+            if (next >= 0 && !Download.isDone(resp.appName)) {
+                ChunkReq req = new ChunkReq(resp.appName, next);
+                sendPlainPacketUDP(req);
             }
-            case LibInfoResp resp -> {
-                GLClient.setMetaData(resp.apps);
-                GLClient.setMetaSignal();
-            }
-            case ChunkResp resp -> {
-                Download.recvBytes(resp.cIndex, resp.data, resp.appName);
-                int next = Download.nextChunk(resp.appName);
-                if (next >= 0 && !Download.isDone(resp.appName)) {
-                    ChunkReq req = new ChunkReq(resp.appName, next);
-                    sendPlainPacketUDP(req);
-                }
-            }
-            default -> {
-                System.out.println("invalid data object");
-            }
+        } else {
+            System.out.println("invalid data object");
         }
     }
 
@@ -61,7 +59,8 @@ public class ConnectionInstance {
         return new Listener() {
             @Override
             public void received(Connection conn, Object obj) {
-                if (obj instanceof EncryptedPacket p) {
+                if (obj instanceof EncryptedPacket) {
+                    EncryptedPacket p = (EncryptedPacket) obj;
                     Object data = p.getDataObject(key);
                     dataSwitch(data);
                 }

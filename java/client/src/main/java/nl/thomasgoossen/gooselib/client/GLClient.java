@@ -9,8 +9,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import org.eclipse.jetty.webapp.MetaData;
-
 import com.esotericsoftware.minlog.Log;
 import static com.esotericsoftware.minlog.Log.LEVEL_ERROR;
 
@@ -248,7 +246,7 @@ public class GLClient {
             if (metaData != null)
                 ctx.json(metaData);
             else
-                ctx.json(new MetaData[0]);
+                ctx.json(new AppMetaData[0]);
         });
     }
 
@@ -277,6 +275,17 @@ public class GLClient {
             sendPacketTCP(req);
             ctx.result("sent request");
         });
+    }
+
+    public static void sendPlainPacketTCP(Object data) {
+        if (connection != null) {
+            connection.sendPlainPacketTCP(data);
+        }
+    }
+    public static void sendPlainPacketUDP(Object data) {
+        if (connection != null) {
+            connection.sendPlainPacketUDP(data);
+        }
     }
 
     public static void sendPacketTCP(Object data) {

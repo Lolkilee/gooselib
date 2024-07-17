@@ -11,12 +11,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
@@ -27,93 +24,44 @@ import nl.thomasgoossen.gooselib.shared.messages.ChunkReq;
 
 public class Download {
     private final static String DL_FILE = "./temp.tar.gz";
+    private final static int INITIAL_REQ_COUNT = 0;
 
     private final static HashMap<String, Download> instances = new HashMap<>();
 
     private final int totalChunkCount;
-    private final ArrayList<Integer> chunkQ;
-    private final List<byte[]> buffer;
-    private final List<Integer> indices;
     private final FileOutputStream fos;
+    private final DownloadBuffer buff;
     private final String path;
     private final String folder;
     private final String appName;
-    private final TimeoutThread tThread;
+    private final long beginTime;
     
     private final ScheduledExecutorService scheduler;
-    private volatile boolean pushActive = false;
 
-    private volatile int lastAppended = -1;
     private volatile boolean done = false;
+    public volatile long bytesRecv = 0;
 
     public Download(AppMetaData meta, String folder) throws FileNotFoundException {
         this.appName = meta.name;
         this.totalChunkCount = meta.chunkCount;
         this.folder = folder;
-        chunkQ = new ArrayList<>();
-        buffer = Collections.synchronizedList(new ArrayList<>());
-        indices = Collections.synchronizedList(new ArrayList<>());;
         this.scheduler = Executors.newScheduledThreadPool(1);
 
         path = DL_FILE.replace("temp", meta.name);
         fos = new FileOutputStream(path);
-        for (int i = 0; i < meta.chunkCount; i++) {
-            chunkQ.add(i);
-        }
+        this.buff = new DownloadBuffer(meta.name, totalChunkCount, fos);
 
         Download d = this;
         instances.put(meta.name, d);
 
-        ChunkReq req = new ChunkReq(meta.name, 0);
-        GLClient.sendPacketTCP(req);
-
-        tThread = new TimeoutThread(appName);
-    }
-    
-    public void start() {
-        Thread t = new Thread(tThread);
-        t.start();
-    }
-    
-    private void pushBuffer() {
-        for (int bufIndex = 0; bufIndex < buffer.size(); bufIndex++) {
-            int i = indices.get(bufIndex);
-            if (i == lastAppended + 1) {
-                try {
-                    fos.write(buffer.get(i));
-                } catch (IOException e) {
-                    System.out.println(e.getMessage());
-                }
-                lastAppended = i;
-            } else if (!indices.contains(lastAppended + 1))
-                break;
+        ChunkReq req = new ChunkReq(meta.name, this.next());
+        GLClient.sendPlainPacketTCP(req);
+        for (int i = 1; i < INITIAL_REQ_COUNT && i < totalChunkCount; i++) {
+            ChunkReq nReq = new ChunkReq(meta.name, this.next());
+            GLClient.sendPlainPacketUDP(nReq);
         }
 
-        System.out.println(lastAppended + " | " + chunkQ.getFirst());
-
-        for (int i = 0; i < buffer.size(); i++) {
-            if (indices.get(i) <= lastAppended) {
-                buffer.remove(i);
-                indices.remove(i);
-            }
-        }
-
-        // Download is done, decompress and finalize
-        if (buffer.isEmpty() && chunkQ.isEmpty()) {
-            System.out.println("finished download for " + appName);
-            try {
-                fos.close();
-                decompress(path, folder);
-                done = true;
-                tThread.stop();
-                instances.remove(appName);
-                File f = new File(path);
-                f.delete();
-                scheduler.shutdown();
-            } catch (IOException e) {
-                System.out.println(e.getMessage());
-            }
-        }
+        beginTime = System.currentTimeMillis();
     }
 
     private void decompress(String src, String dest) {
@@ -132,10 +80,10 @@ public class Download {
                 } else {
                     Files.createDirectories(outputPath.getParent());
                     try (OutputStream os = Files.newOutputStream(outputPath)) {
-                        byte[] buff = new byte[1024];
+                        byte[] outArr = new byte[1024];
                         int len;
-                        while ((len = tais.read(buff)) != -1) {
-                            os.write(buff, 0, len);
+                        while ((len = tais.read(outArr)) != -1) {
+                            os.write(outArr, 0, len);
                         }
                     }
                 }
@@ -146,35 +94,32 @@ public class Download {
     }
 
     public void addChunk(int index, byte[] bytes) {
-        buffer.add(bytes);
-        indices.add(index);
-
-        chunkQ.remove(chunkQ.indexOf(index));
-
-        if (!pushActive) {
-            scheduler.scheduleAtFixedRate(() -> {
-                pushBuffer();
-            }, 1000, 1000, TimeUnit.MILLISECONDS);
-            pushActive = true;
-        }
+        buff.addToBuffer(index, bytes);
     }
     
     public static void kill() {
         for (Download inst : instances.values()) {
             inst.scheduler.shutdown();
+            inst.buff.scheduler.shutdown();
         }
     }
 
-    public int next() {
-        if (!chunkQ.isEmpty() && !done) {
-            int index = chunkQ.getFirst();
-            return index;
-        }
-        return -1;
+    private int next() {
+        return buff.next(new ArrayList<>());
     }
 
     public float progress() {
-        return 1.0f - ((float) chunkQ.size()) / ((float) totalChunkCount);
+        return ((float) buff.getLastAppended()) / ((float) totalChunkCount);
+    }
+
+    public float networkProgress() {
+        return 1.0f - ((float) buff.getToRecv().size()) / ((float) totalChunkCount);
+    }
+    
+    // in bytes/second
+    public long speed() {
+        long elapsed = System.currentTimeMillis() - beginTime;
+        return (bytesRecv / elapsed) * 1000;
     }
 
     public boolean getDone() {
@@ -194,8 +139,8 @@ public class Download {
     public static void recvBytes(int index, byte[] bytes, String name) {
         if (instances.containsKey(name)) {
             Download d = instances.get(name);
-            d.tThread.updateRecv();
             d.addChunk(index, bytes);
+            d.bytesRecv += bytes.length;
         }
     }
 
@@ -210,7 +155,7 @@ public class Download {
         DownloadInfo[] arr = new DownloadInfo[instances.values().size()];
         int i = 0;
         for (Download d : instances.values()) {
-            arr[i] = new DownloadInfo(d.appName, d.progress());
+            arr[i] = new DownloadInfo(d.appName, d.progress(), d.networkProgress(), d.speed());
             i++;
         }
 
@@ -221,5 +166,17 @@ public class Download {
         if (!instances.containsKey(name))
             return true;
         return instances.get(name).getDone();
+    }
+
+    public static void finish(String name) {
+        if (instances.containsKey(name)) {
+            Download d = instances.get(name);
+            d.decompress(d.path, d.folder);
+            d.done = true;
+            instances.remove(name);
+            File f = new File(d.path);
+            f.delete();
+            d.scheduler.shutdown();
+        }
     }
 }

@@ -3,7 +3,9 @@ import { BASE_URL } from "./login";
 
 export interface DownloadInfo {
     appName: string
-    progress: number
+    writeProgress: number
+    netwProgress: number
+    speed: number
 }
 
 export async function getDownloadInfos(): Promise<DownloadInfo[]> {
