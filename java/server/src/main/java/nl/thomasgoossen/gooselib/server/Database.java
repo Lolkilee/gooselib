@@ -316,4 +316,17 @@ public class Database {
             appMap.put(appName, def);
         }
     }
+
+    /**
+     * Gets the amount of chunks in an app
+     * @param name app name
+     * @return chunk count
+     */
+    public static int getChunkCount(String name) {
+        if (appMap.containsKey(name)) {
+            return appMap.get(name).getChunkCount();
+        }
+
+        return -1;
+    }
 }

@@ -26,6 +26,8 @@ import nl.thomasgoossen.gooselib.shared.messages.UploadCompleteMsg;
 import nl.thomasgoossen.gooselib.shared.messages.UploadReq;
 
 public class NetworkingListener extends Listener {
+    private static final int CHUNK_WINDOW = 1; // on request send index + n chunks
+
     private final boolean manager;
     private final SecretKey encKey;
 
@@ -70,11 +72,15 @@ public class NetworkingListener extends Listener {
 
             switch (data) {
                 case ChunkReq req -> {
-                    byte[] c = Database.getChunk(req.appName, req.index);
-                    ChunkResp resp = new ChunkResp(req.appName, req.index, c);
-                    EncryptedPacket p = new EncryptedPacket(resp);
-                    Logger.dbg("sending chunk " + req.index + " for app " + req.appName);
-                    conn.sendUDP(p);
+                    for (int i = 0; i < CHUNK_WINDOW; i++) {
+                        if (req.index + i < Database.getChunkCount(req.appName)) {
+                            byte[] c = Database.getChunk(req.appName, req.index + i);
+                            ChunkResp resp = new ChunkResp(req.appName, req.index + i, c);
+                            EncryptedPacket p = new EncryptedPacket(resp);
+                            Logger.dbg("sending chunk " + (req.index + i) + " for app " + req.appName);
+                            conn.sendUDP(p);
+                        }
+                    }
                 }
                 case UploadReq req -> {
                     if (Database.auth("admin", req.getAdminPass())) {

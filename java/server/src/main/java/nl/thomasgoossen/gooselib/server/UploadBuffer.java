@@ -55,7 +55,6 @@ public class UploadBuffer {
                 }
             }
 
-            Logger.dbg("lA: " + lastAppended + ", first: " + indices.getFirst());
             for (int i = 0; i < buffer.size(); i++) {
                 if (indices.get(i) <= lastAppended) {
                     buffer.remove(i);
@@ -76,7 +75,7 @@ public class UploadBuffer {
     }
 
     public boolean isDone() {
-        return toRecv.isEmpty();
+        return toRecv.isEmpty() && buffer.isEmpty();
     }
 
     public int next(ArrayList<Integer> alreadyExpected) {

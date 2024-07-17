@@ -27,14 +27,16 @@ public class Handshake {
             @Override
             public void received(Connection connection, Object obj) {
                 synchronized (lock) {
-                    if (obj instanceof EncryptedPacket pkt) {
+                    if (obj instanceof EncryptedPacket) {
+                        EncryptedPacket pkt = (EncryptedPacket) obj;
                         Object decoded = pkt.getDataObject(null);
-                        switch (decoded) {
-                            case HandshakeResp input -> resp = input;
-                            case AuthError errPkt -> err = errPkt.reason;
-                            default -> {
-                                err = "got unexpected packet";
-                            }
+                        
+                        if (decoded instanceof HandshakeResp) {
+                            resp = (HandshakeResp) decoded;
+                        } else if (decoded instanceof AuthError) {
+                            err = ((AuthError) decoded).reason;
+                        } else {
+                            err = "got unexpected packet";
                         }
 
                         receivedResp = true;

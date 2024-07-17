@@ -132,7 +132,7 @@
             >
         {:else}
             <button
-                class="btn variant-filled-primary mb-10"
+                class="btn variant-filled-primary mb-10 mx-3"
                 on:click={downloadStart}>Install</button
             >
         {/if}
@@ -144,7 +144,7 @@
             Latest version: {data.metaData?.latestVersion}
         </p>
         <p class="text-slate-400">
-            App size (compressed): ({formatBytes(data.metaData?.bytesCount, 2)})
+            App size (compressed): {formatBytes(data.metaData?.bytesCount, 2)}
         </p>
         <p class="text-slate-400">Install folder: {data.installPath}</p>
         {#if data.metaData?.execPath != null && data.metaData?.execPath != undefined}
