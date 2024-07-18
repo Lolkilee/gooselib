@@ -29,6 +29,7 @@
         loginCacheFail,
         loginSuccToast,
         logoutToast,
+        svrLostToast,
     } from '$lib/toasts';
     import {
         cacheMetaData,
@@ -72,6 +73,8 @@
         loginModal: { ref: LoginModal },
     };
 
+    let starting = true;
+
     async function pingClient(): Promise<boolean> {
         try {
             const resp = await fetch(BASE_URL, {
@@ -98,6 +101,21 @@
         ) {
             //@ts-ignore
             metaLibStore.set(getMetaData());
+        }
+    }
+
+    async function connectedUpdate() {
+        const resp = await fetch(BASE_URL + 'connection');
+        //@ts-ignore
+        const alive = resp.data?.connected;
+        if (
+            !alive &&
+            alive != null &&
+            !(sessionStorage.getItem('login-alive') == 'true') &&
+            !starting
+        ) {
+            toastStore.trigger(svrLostToast);
+            logout(false);
         }
     }
 
@@ -137,6 +155,7 @@
             await loginProcess();
         }
 
+        starting = false;
         updateMeta();
     }
 
@@ -169,10 +188,12 @@
 
     async function logout(resetPass = true) {
         if (sessionStorage.getItem('login-alive') == 'false') {
-            if (resetPass) localStorage.removeItem('password');
+            if (resetPass) {
+                localStorage.removeItem('password');
+                toastStore.trigger(logoutToast);
+            }
             sessionStorage.setItem('logged-in', 'false');
             sessionStorage.setItem('login-alive', 'false');
-            toastStore.trigger(logoutToast);
             metaLibStore.set([]);
             loginProcess(false);
         }
@@ -181,12 +202,15 @@
     setVer();
     startClient();
 
-    setInterval(keepAliveReq, 1000);
-    setInterval(updateDownloadInfo, 100);
-
+    const kaInt = setInterval(keepAliveReq, 1000);
+    const udiInt = setInterval(updateDownloadInfo, 100);
     const updateInt = setInterval(updateMeta, 1000);
+    const aliveInt = setInterval(connectedUpdate, 1000);
     onDestroy(() => {
+        clearInterval(kaInt);
+        clearInterval(udiInt);
         clearInterval(updateInt);
+        clearInterval(aliveInt);
     });
 
     let metaLib: MetaLibrary | null = null;

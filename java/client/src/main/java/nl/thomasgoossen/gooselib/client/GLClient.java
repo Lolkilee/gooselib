@@ -28,7 +28,7 @@ public class GLClient {
     private static String username;
     private static String password;
 
-    private static ConnectionInstance connection;
+    private static volatile ConnectionInstance connection;
     private static volatile long lastReq;
 
     public static void main(String[] args) {
@@ -130,7 +130,6 @@ public class GLClient {
                 }
 
                 String ip = ctx.pathParam("ip");
-
                 HandshakeResp resp = null;
                 try {
                     resp = Handshake.performHandshake(ip, username, password);
@@ -234,7 +233,7 @@ public class GLClient {
         return app.get("/meta", ctx -> {
             if (connection != null) {
                 LibInfoReq req = new LibInfoReq(username, password);
-                connection.sendPacketTCP(req);
+                sendPacketTCP(req);
 
                 long startTime = System.currentTimeMillis();
                 while (!metaSignal) {
