@@ -38,3 +38,10 @@ export const appRemovedToast: ToastSettings = {
     hideDismiss: true,
     timeout: 2000
 }
+
+export const svrLostToast: ToastSettings = {
+    message: 'Lost connection with server',
+    background: 'variant-filled-error',
+    hideDismiss: true,
+    timeout: 3000
+}

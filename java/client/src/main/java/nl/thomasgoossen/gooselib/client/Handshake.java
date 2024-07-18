@@ -16,7 +16,7 @@ public class Handshake {
     private static final int MANAGER_PORT = 61234;
 
     private static boolean receivedResp = false;
-    private static HandshakeResp resp = null;
+    private static volatile HandshakeResp resp = null;
     private static volatile String err = null;
     private static final Object lock = new Object();
 
@@ -51,6 +51,8 @@ public class Handshake {
             throws InterruptedException, IOException {
         
         isHandshaking = true;
+        receivedResp = false;
+        resp = null;
         try {
             Client c = new Client();
 
@@ -77,7 +79,7 @@ public class Handshake {
             }
 
             c.stop();
-        } catch (Exception e) {
+        } catch (IOException | InterruptedException e) {
             System.out.println(e.getMessage());
         }
         isHandshaking = false;

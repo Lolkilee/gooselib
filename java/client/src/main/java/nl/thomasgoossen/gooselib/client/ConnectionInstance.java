@@ -18,9 +18,8 @@ import nl.thomasgoossen.gooselib.shared.messages.LibInfoResp;
 import nl.thomasgoossen.gooselib.shared.messages.UploadCompleteMsg;
 
 public class ConnectionInstance {
-
-    private final Client client;
-    private final SecretKey key;
+    private static Client client;
+    private static SecretKey key;
 
     private void dataSwitch(Object data) {
         if (data instanceof ChunkUploadReq) {
