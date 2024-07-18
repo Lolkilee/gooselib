@@ -125,6 +125,10 @@
             const comm = Command.sidecar('../binaries/exec_client', [
                 resourcePath,
             ]);
+
+            comm.stdout.on('data', (line) => console.log(line));
+            comm.stderr.on('data', (line) => console.log(line));
+
             clientProc = await comm.spawn();
             await new Promise((r) => setTimeout(r, 1000));
         }

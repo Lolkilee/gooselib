@@ -20,9 +20,9 @@
             <p class="pt-2">{info.appName}</p>
             <div class="flex py-2 w-3/4">
                 {#if info.netwProgress != 1}
-                    <p class="pr-10 w-1/6">{formatBytes(info.speed)}/s</p>
+                    <p class="pr-10 w-1/4">{formatBytes(info.speed)}/s</p>
                 {:else}
-                    <p class="pr-10 w-1/6">Installing...</p>
+                    <p class="pr-10 w-1/4">Installing...</p>
                 {/if}
                 <div class="grid h-full w-full">
                     <ProgressBar

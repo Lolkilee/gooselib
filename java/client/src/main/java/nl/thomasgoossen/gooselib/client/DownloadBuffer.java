@@ -73,6 +73,7 @@ public class DownloadBuffer {
                 lastAppended++;
             }
 
+            // There is a gap in the buffer
             if (buffer.containsKey(lastAppended + 2) && lastAppended + 2 < totalCount) {
                 ChunkReq req = new ChunkReq(name, lastAppended + 2);
                 GLClient.sendPlainPacketUDP(req);

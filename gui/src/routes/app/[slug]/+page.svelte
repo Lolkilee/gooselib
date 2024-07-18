@@ -127,7 +127,7 @@
                 on:click={updateStart}>Update</button
             >
         {:else if downloading}
-            <button class="btn variant-filled-primary mb-10"
+            <button class="btn variant-filled-surface mb-10"
                 >Downloading...</button
             >
         {:else}

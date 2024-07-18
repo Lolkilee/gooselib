@@ -10,7 +10,6 @@ import com.esotericsoftware.kryonet.Listener;
 
 import nl.thomasgoossen.gooselib.shared.EncryptedPacket;
 import nl.thomasgoossen.gooselib.shared.KryoHelper;
-import nl.thomasgoossen.gooselib.shared.messages.ChunkReq;
 import nl.thomasgoossen.gooselib.shared.messages.ChunkResp;
 import nl.thomasgoossen.gooselib.shared.messages.ChunkUploadReq;
 import nl.thomasgoossen.gooselib.shared.messages.ChunkUploadResp;
@@ -45,11 +44,6 @@ public class ConnectionInstance {
         } else if (data instanceof ChunkResp) {
             ChunkResp resp = (ChunkResp) data;
             Download.recvBytes(resp.cIndex, resp.data, resp.appName);
-            int next = Download.nextChunk(resp.appName);
-            if (next >= 0 && !Download.isDone(resp.appName)) {
-                ChunkReq req = new ChunkReq(resp.appName, next);
-                sendPlainPacketUDP(req);
-            }
         } else {
             System.out.println("invalid data object");
         }
