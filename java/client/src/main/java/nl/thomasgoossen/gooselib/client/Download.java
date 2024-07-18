@@ -20,11 +20,11 @@ import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 
 import nl.thomasgoossen.gooselib.shared.AppMetaData;
-import nl.thomasgoossen.gooselib.shared.messages.ChunkReq;
+import nl.thomasgoossen.gooselib.shared.messages.ChunksReq;
 
 public class Download {
     private final static String DL_FILE = "./temp.tar.gz";
-    private final static int INITIAL_REQ_COUNT = 0;
+    private final static int REQ_WINDOW = 32;
 
     private final static HashMap<String, Download> instances = new HashMap<>();
 
@@ -40,6 +40,7 @@ public class Download {
 
     private volatile boolean done = false;
     public volatile long bytesRecv = 0;
+    public volatile int next = 0;
 
     public Download(AppMetaData meta, String folder) throws FileNotFoundException {
         this.appName = meta.name;
@@ -54,12 +55,9 @@ public class Download {
         Download d = this;
         instances.put(meta.name, d);
 
-        ChunkReq req = new ChunkReq(meta.name, this.next());
+        ChunksReq req = new ChunksReq(appName, next, REQ_WINDOW);
         GLClient.sendPlainPacketTCP(req);
-        for (int i = 1; i < INITIAL_REQ_COUNT && i < totalChunkCount; i++) {
-            ChunkReq nReq = new ChunkReq(meta.name, this.next());
-            GLClient.sendPlainPacketUDP(nReq);
-        }
+        next = REQ_WINDOW - 1;
 
         beginTime = System.currentTimeMillis();
     }
@@ -141,6 +139,12 @@ public class Download {
             Download d = instances.get(name);
             d.addChunk(index, bytes);
             d.bytesRecv += bytes.length;
+
+            if (index == d.next) {
+                ChunksReq req = new ChunksReq(d.appName, d.next + 1, REQ_WINDOW);
+                GLClient.sendPacketTCP(req);
+                d.next += REQ_WINDOW;
+            }
         }
     }
 

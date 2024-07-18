@@ -16,6 +16,7 @@ import nl.thomasgoossen.gooselib.shared.messages.ChunkReq;
 import nl.thomasgoossen.gooselib.shared.messages.ChunkResp;
 import nl.thomasgoossen.gooselib.shared.messages.ChunkUploadReq;
 import nl.thomasgoossen.gooselib.shared.messages.ChunkUploadResp;
+import nl.thomasgoossen.gooselib.shared.messages.ChunksReq;
 import nl.thomasgoossen.gooselib.shared.messages.HandshakeReq;
 import nl.thomasgoossen.gooselib.shared.messages.HandshakeResp;
 import nl.thomasgoossen.gooselib.shared.messages.LibInfoReq;
@@ -71,15 +72,23 @@ public class NetworkingListener extends Listener {
             Logger.dbg("data object in req listener with type: " + data.getClass().getSimpleName());
 
             switch (data) {
+                case ChunksReq req -> {
+                    int stop = req.beginIndex + req.length;
+                    for (int i = req.beginIndex; i < stop && i < Database.getChunkCount(req.appName); i++) {
+                        byte[] c = Database.getChunk(req.appName, i);
+                        ChunkResp resp = new ChunkResp(req.appName, i, c);
+                        EncryptedPacket p = new EncryptedPacket(resp);
+                        Logger.dbg("sending chunk " + i + " for app " + req.appName);
+                        conn.sendUDP(p);
+                    }
+                }
                 case ChunkReq req -> {
-                    for (int i = 0; i < CHUNK_WINDOW; i++) {
-                        if (req.index + i < Database.getChunkCount(req.appName)) {
-                            byte[] c = Database.getChunk(req.appName, req.index + i);
-                            ChunkResp resp = new ChunkResp(req.appName, req.index + i, c);
-                            EncryptedPacket p = new EncryptedPacket(resp);
-                            Logger.dbg("sending chunk " + (req.index + i) + " for app " + req.appName);
-                            conn.sendUDP(p);
-                        }
+                    if (req.index  < Database.getChunkCount(req.appName)) {
+                        byte[] c = Database.getChunk(req.appName, req.index);
+                        ChunkResp resp = new ChunkResp(req.appName, req.index, c);
+                        EncryptedPacket p = new EncryptedPacket(resp);
+                        Logger.dbg("sending chunk " + (req.index) + " for app " + req.appName);
+                        conn.sendUDP(p);
                     }
                 }
                 case UploadReq req -> {
