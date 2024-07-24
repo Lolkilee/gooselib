@@ -20,7 +20,6 @@ public class SpeedTests {
         for (byte[] c : chunks) {
             Database.appendChunk("test", c);
         }
-        Database.flushApp("test");
 
         long endTime = System.currentTimeMillis();
         printResult(endTime - beginTime, "write test");
@@ -39,7 +38,6 @@ public class SpeedTests {
             Database.appendChunk("testRead", c);
         }
 
-        Database.flushApp("testRead");
         chunks.clear();
         long beginTime = System.currentTimeMillis();
 

@@ -1,6 +1,5 @@
 package nl.thomasgoossen.gooselib.server.dataclasses;
 
-import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -24,9 +23,7 @@ public class AppDefinition implements Serializable {
     private final int chunkSize;
     private long bytesCount = 0;
 
-    private transient volatile boolean readMode = true;
-
-    private transient BufferedOutputStream outStream;
+    private transient boolean readMode = true;
 
     public AppDefinition(String name, String version, int chunkSize) {
         this.name = name;
@@ -52,19 +49,10 @@ public class AppDefinition implements Serializable {
         }
     }
 
-    public void flushBuffer() throws IOException {
-        if (outStream != null) {
-            outStream.flush();
-        }
-    }
-
     public void appendChunk(byte[] chunk) throws IOException {
-        if (readMode || outStream == null) {
-            outStream = new BufferedOutputStream(new FileOutputStream(chunksPath, true));
-            readMode = false;
+        try (FileOutputStream outStream = new FileOutputStream(chunksPath, true)) {
+            outStream.write(chunk);
         }
-
-        outStream.write(chunk);
         bytesCount += chunk.length;
     }
 
@@ -128,19 +116,11 @@ public class AppDefinition implements Serializable {
     }
 
     public void disableWrites() {
-        readMode = true;
-        if (outStream != null) {
-            try {
-                outStream.close();
-            } catch (IOException e) {
-                Logger.err(e.getMessage());
-            }
-            outStream = null;
-        }
+        this.readMode = true;
     }
 
     public boolean getIsPublic() {
-        return readMode;
+        return true;
     }
 
     public String getExecPath() {

@@ -14,6 +14,7 @@ import com.esotericsoftware.kryonet.Connection;
 
 import nl.thomasgoossen.gooselib.shared.EncryptedPacket;
 import nl.thomasgoossen.gooselib.shared.messages.ChunkUploadReq;
+import nl.thomasgoossen.gooselib.shared.messages.UploadCompleteMsg;
 
 public class UploadBuffer {
     public final int totalCount;
@@ -45,9 +46,9 @@ public class UploadBuffer {
             } catch (IOException e) {
                 Logger.err(e.getMessage());
             }
-        }, 1000, 5000, TimeUnit.MILLISECONDS);
+        }, 1000, 100, TimeUnit.MILLISECONDS);
 
-        Logger.log("created new download buffer with " + toRecv.size() + " expected chunks");
+        Logger.log("created new upload buffer with " + toRecv.size() + " expected chunks");
     }
 
     public void addToBuffer(int index, byte[] chunk) {
@@ -83,6 +84,7 @@ public class UploadBuffer {
         }
 
         buffer.clear();
+        Logger.log("pushed " + keysToRemove.size() + " chunks to disk");
         for (int i : keysToRemove) {
             recvBuffer.remove(i);
         }
@@ -91,6 +93,10 @@ public class UploadBuffer {
             Logger.log("writes finished, scheduler shutting down...");
             scheduler.shutdown();
             Database.disableAppWrite(name);
+            Logger.log("sending completion message");
+            UploadCompleteMsg msg = new UploadCompleteMsg(totalCount);
+            EncryptedPacket p = new EncryptedPacket(msg);
+            conn.sendTCP(p);
         }
     }
 
