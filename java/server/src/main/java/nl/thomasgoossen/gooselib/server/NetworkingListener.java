@@ -105,16 +105,18 @@ public class NetworkingListener extends Listener {
                 case ChunkUploadResp resp -> {
                     if (uploadBuffers.containsKey(resp.appName)) {
                         Logger.dbg("chunk recv, size " + resp.chunk.length + ", index " + resp.index);
-                        UploadBuffer buff = uploadBuffers.get(resp.appName);
-                        buff.addToBuffer(resp.index, resp.chunk);
-
                         int latest = uploadFinals.get(resp.appName);
                         if (resp.index >= latest) {
                             ChunkUploadReq req = new ChunkUploadReq(resp.appName, resp.index + 1, CHUNK_WINDOW);
                             EncryptedPacket p = new EncryptedPacket(req);
                             conn.sendTCP(p);
                             uploadFinals.put(resp.appName, resp.index + CHUNK_WINDOW);
-                        } else if (buff.isDone()) {
+                        }
+                        
+                        UploadBuffer buff = uploadBuffers.get(resp.appName);
+                        buff.addToBuffer(resp.index, resp.chunk);
+
+                        if (buff.isDone()) {
                             Logger.log("all upload chunks received");
                             UploadCompleteMsg msg = new UploadCompleteMsg(buff.totalCount);
                             EncryptedPacket p = new EncryptedPacket(msg, encKey);
