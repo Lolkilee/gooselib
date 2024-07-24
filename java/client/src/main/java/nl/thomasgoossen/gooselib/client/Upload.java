@@ -22,6 +22,8 @@ public class Upload {
     private static String curUploadName = "undefined";
     private static String status = "idle";
 
+    private static int chunkCount = 0;
+
     public static void upload(String password, String folder, String name, String version) {
         curUploadName = name;
         System.out.println("compressing...");
@@ -33,7 +35,7 @@ public class Upload {
 
         // Create and send initial uploadReq
         File f = new File(UPLOAD_FILE);
-        int chunkCount = (int) Math.ceil((double) f.length() / CHUNK_SIZE);
+        chunkCount = (int) Math.ceil((double) f.length() / CHUNK_SIZE);
         System.out.println("chunks: " + chunkCount);
         UploadReq req = new UploadReq(password, name, version, chunkCount, CHUNK_SIZE);
         GLClient.sendPacketTCP(req);
@@ -103,5 +105,9 @@ public class Upload {
         // Cleanup temp file
         File f = new File(UPLOAD_FILE);
         f.delete();
+    }
+
+    public static int getChunkCount() {
+        return chunkCount;
     }
 }

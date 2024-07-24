@@ -190,7 +190,7 @@ public class GLClient {
         });
     }
 
-    // Path should be formatted between [] brackets, and ! instead of /
+    // Path should be formatted between [] brackets, and ! instead of /, * instead of :
     private static Javalin uploadHandler(Javalin app) {
         return app.post("/upload/{path}/{name}", ctx -> {
             if (connection != null) {
@@ -201,6 +201,7 @@ public class GLClient {
                 path = path.replace("[", "");
                 path = path.replace("]", "");
                 path = path.replace("!", "/");
+                path = path.replace("*", ":");
                 System.out.println("starting upload with vars:");
                 System.out.println("path: " + Paths.get(path).toAbsolutePath());
                 System.out.println("name: " + name);

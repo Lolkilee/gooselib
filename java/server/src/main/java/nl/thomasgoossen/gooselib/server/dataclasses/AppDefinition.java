@@ -1,12 +1,11 @@
 package nl.thomasgoossen.gooselib.server.dataclasses;
 
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.io.Serializable;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -25,11 +24,9 @@ public class AppDefinition implements Serializable {
     private final int chunkSize;
     private long bytesCount = 0;
 
-    private transient FileOutputStream outStream = null;
-    private transient RandomAccessFile inFile = null;
-    private transient FileChannel inChannel = null;
-
     private transient volatile boolean readMode = true;
+
+    private transient BufferedOutputStream outStream;
 
     public AppDefinition(String name, String version, int chunkSize) {
         this.name = name;
@@ -45,22 +42,26 @@ public class AppDefinition implements Serializable {
                 Logger.err(e.getMessage());
             }
         }
+
+        if (Files.exists(Paths.get(chunksPath))) {
+            try {
+                Files.delete(Paths.get(chunksPath));
+            } catch (IOException e) {
+                Logger.err(e.getMessage());
+            }
+        }
+    }
+
+    public void flushBuffer() throws IOException {
+        if (outStream != null) {
+            outStream.flush();
+        }
     }
 
     public void appendChunk(byte[] chunk) throws IOException {
-        readMode = false;
-        if (inChannel != null) {
-            inChannel.close();
-            inChannel = null;
-        }
-        
-        if (inFile != null) {
-            inFile.close();
-            inFile = null;
-        }
-
-        if (outStream == null) {
-            outStream = new FileOutputStream(chunksPath, true);
+        if (readMode || outStream == null) {
+            outStream = new BufferedOutputStream(new FileOutputStream(chunksPath, true));
+            readMode = false;
         }
 
         outStream.write(chunk);
@@ -69,20 +70,13 @@ public class AppDefinition implements Serializable {
 
     public byte[] getChunk(int i) throws IOException {
         disableWrites();
-        if (inFile == null || inChannel == null) {
-            inFile = new RandomAccessFile(chunksPath, "r");
-            inChannel = inFile.getChannel();
-        }
 
         long offset = i * chunkSize;
         int len = chunkSize;
         if (offset + len > bytesCount)
             len = (int) (bytesCount % (long) chunkSize);
 
-        ByteBuffer buffer = ByteBuffer.allocate(len);
-        inChannel.position(offset);
-        inChannel.read(buffer);
-        return buffer.array();
+        return readChunk(chunksPath, offset, len);
     }
 
     public int getChunkCount() {
@@ -99,6 +93,7 @@ public class AppDefinition implements Serializable {
 
     public void deleteFiles() {
         Logger.warn("deleteFiles() called for AppDef " + name);
+
         try {
             Files.delete(Paths.get(chunksPath));
         } catch (IOException e) {
@@ -134,12 +129,17 @@ public class AppDefinition implements Serializable {
 
     public void disableWrites() {
         readMode = true;
+        if (outStream != null) {
+            try {
+                outStream.close();
+            } catch (IOException e) {
+                Logger.err(e.getMessage());
+            }
+            outStream = null;
+        }
     }
 
     public boolean getIsPublic() {
-        if (outStream == null)
-            readMode = true;
-
         return readMode;
     }
 
@@ -149,5 +149,14 @@ public class AppDefinition implements Serializable {
 
     public void setExecPath(String execPath) {
         this.execPath = execPath;
+    }
+
+    private static byte[] readChunk(String path, long start, int length) throws IOException {
+        try (RandomAccessFile file = new RandomAccessFile(path, "r")) {
+            file.seek(start);
+            byte[] buffer = new byte[length];
+            file.read(buffer, 0, length);
+            return buffer;
+        }
     }
 }

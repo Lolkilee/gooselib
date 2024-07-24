@@ -65,7 +65,7 @@ public class Logger {
     public static void log(String message, LogLevel level) {
         if (inst == null) {
             try {
-                inst = new Logger(LogLevel.DEBUG);
+                inst = new Logger(LogLevel.INFO);
             } catch (IOException ex) {
                 System.out.println(ex.getMessage());
                 return;
