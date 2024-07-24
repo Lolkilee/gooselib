@@ -231,6 +231,20 @@ public class Database {
     }
 
     /**
+     * Flushes the output stream of an App
+     * @param name app name
+     */
+    public static void flushApp(String name) {
+        if (appMap.containsKey(name)) {
+            try {
+                appMap.get(name).flushBuffer();
+            } catch (IOException e) {
+                Logger.err("error flushing: " + e.getMessage());
+            }
+        }
+    }
+
+    /**
      * Checks if an app exists in database
      * @param name app name
      * @return whether ot not the app is in the database

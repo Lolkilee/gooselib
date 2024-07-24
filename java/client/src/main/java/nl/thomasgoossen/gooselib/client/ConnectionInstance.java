@@ -25,11 +25,13 @@ public class ConnectionInstance {
         if (data instanceof ChunkUploadReq) {
             ChunkUploadReq req = (ChunkUploadReq) data;
             if (req.appName.equals(Upload.getCurUploadName())) {
-                byte[] chunk = Upload.getChunk(req.index);
-                ChunkUploadResp resp = new ChunkUploadResp(
-                        Upload.getCurUploadName(),
-                        req.index, chunk);
-                sendPlainPacketUDP(resp);
+                int stop = req.index + req.length;
+                for (int i = req.index; i < stop && i < Upload.getChunkCount(); i++) {
+                    byte[] chunk = Upload.getChunk(i);
+                    ChunkUploadResp resp = new ChunkUploadResp(
+                            Upload.getCurUploadName(), i, chunk);
+                    sendPlainPacketUDP(resp);
+                }
             }
         } else if (data instanceof UploadCompleteMsg) {
             UploadCompleteMsg msg = (UploadCompleteMsg) data;

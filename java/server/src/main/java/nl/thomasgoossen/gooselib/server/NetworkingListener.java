@@ -27,14 +27,14 @@ import nl.thomasgoossen.gooselib.shared.messages.UploadCompleteMsg;
 import nl.thomasgoossen.gooselib.shared.messages.UploadReq;
 
 public class NetworkingListener extends Listener {
-    private static final int CHUNK_WINDOW = 1; // on request send index + n chunks
+    private static final int CHUNK_WINDOW = 32; // on request send index + n chunks
 
     private final boolean manager;
     private final SecretKey encKey;
 
     // Initial upload reqs to be sent
     private final HashMap<String, UploadBuffer> uploadBuffers = new HashMap<>();
-    private final HashMap<String, ArrayList<Integer>> expectedLists = new HashMap<>();
+    private final HashMap<String, Integer> uploadFinals = new HashMap<>();
 
     // Manager constructor
     public NetworkingListener() {
@@ -95,31 +95,26 @@ public class NetworkingListener extends Listener {
                     if (Database.auth("admin", req.getAdminPass())) {
                         Logger.log("upload req recv, sending chunk upload requests");
                         Database.createOrClearApp(req.appName, req.version, req.chunkSize);
-                        uploadBuffers.put(req.appName, new UploadBuffer(req.appName, req.chunkCount));
-                        expectedLists.put(req.appName, new ArrayList<>());
-                        expectedLists.get(req.appName).add(0);
-                        EncryptedPacket p = new EncryptedPacket(new ChunkUploadReq(req.appName, 0), encKey);
-                        conn.sendUDP(p);
+                        uploadBuffers.put(req.appName, new UploadBuffer(req.appName, req.chunkCount, conn));
+                        uploadFinals.put(req.appName, CHUNK_WINDOW - 1);
+
+                        EncryptedPacket p = new EncryptedPacket(new ChunkUploadReq(req.appName, 0, CHUNK_WINDOW));
+                        conn.sendTCP(p);
                     }
                 }
                 case ChunkUploadResp resp -> {
-                    if (uploadBuffers.containsKey(resp.appName)
-                            && expectedLists.containsKey(resp.appName)) {
-
+                    if (uploadBuffers.containsKey(resp.appName)) {
                         Logger.dbg("chunk recv, size " + resp.chunk.length + ", index " + resp.index);
                         UploadBuffer buff = uploadBuffers.get(resp.appName);
                         buff.addToBuffer(resp.index, resp.chunk);
 
-                        ArrayList<Integer> expected = expectedLists.get(resp.appName);
-                        if (expected.contains(resp.index))
-                            expected.remove(expected.indexOf(resp.index));
-                        expectedLists.put(resp.appName, expected);
-
-                        int next = buff.next(expectedLists.get(resp.appName));
-                        if (next >= 0) {
-                            EncryptedPacket p = new EncryptedPacket(new ChunkUploadReq(resp.appName, next), encKey);
-                            conn.sendUDP(p);
-                        } else {
+                        int latest = uploadFinals.get(resp.appName);
+                        if (resp.index >= latest) {
+                            ChunkUploadReq req = new ChunkUploadReq(resp.appName, resp.index + 1, CHUNK_WINDOW);
+                            EncryptedPacket p = new EncryptedPacket(req);
+                            conn.sendTCP(p);
+                            uploadFinals.put(resp.appName, resp.index + CHUNK_WINDOW);
+                        } else if (buff.isDone()) {
                             Logger.log("all upload chunks received");
                             UploadCompleteMsg msg = new UploadCompleteMsg(buff.totalCount);
                             EncryptedPacket p = new EncryptedPacket(msg, encKey);

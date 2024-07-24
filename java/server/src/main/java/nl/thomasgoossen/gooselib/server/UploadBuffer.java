@@ -1,69 +1,93 @@
 package nl.thomasgoossen.gooselib.server;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-public class UploadBuffer {
-    private final String name;
+import com.esotericsoftware.kryonet.Connection;
 
+import nl.thomasgoossen.gooselib.shared.EncryptedPacket;
+import nl.thomasgoossen.gooselib.shared.messages.ChunkUploadReq;
+
+public class UploadBuffer {
     public final int totalCount;
 
+    private final String name;
     private int lastAppended = -1;
-    private final List<byte[]> buffer;
-    private final List<Integer> indices;
-    private final ArrayList<Integer> toRecv;
-    private final ScheduledExecutorService scheduler;
+    private long bytesAppended = 0;
+    private final ConcurrentHashMap<Integer, byte[]> recvBuffer;
+    private final List<Integer> toRecv;
+    private final Connection conn;
 
-    public UploadBuffer(String name, int totalCount) {
+    public final ScheduledExecutorService scheduler;
+
+    public UploadBuffer(String name, int totalCount, Connection conn) {
         this.name = name;
         this.totalCount = totalCount;
-        this.toRecv = new ArrayList<>();
-        this.buffer = Collections.synchronizedList(new ArrayList<>());
-        this.indices = Collections.synchronizedList(new ArrayList<>());
+        this.toRecv = Collections.synchronizedList(new ArrayList<>());
+        this.recvBuffer = new ConcurrentHashMap<>();
         this.scheduler = Executors.newScheduledThreadPool(1);
+        this.conn = conn;
 
         for (int i = 0; i < totalCount; i++) {
             toRecv.add(i);
         }
 
         scheduler.scheduleAtFixedRate(() -> {
-            pushBuffer();
-        }, 1000, 1000, TimeUnit.MILLISECONDS);
+            try {
+                pushBuffer();
+            } catch (IOException e) {
+                Logger.err(e.getMessage());
+            }
+        }, 1000, 5000, TimeUnit.MILLISECONDS);
 
-        Logger.dbg("created new upload buffer with " + toRecv.size() + " expected chunks");
+        Logger.log("created new download buffer with " + toRecv.size() + " expected chunks");
     }
 
     public void addToBuffer(int index, byte[] chunk) {
         if (toRecv.contains(index)) {
-            buffer.add(chunk);
-            indices.add(index);
+            recvBuffer.put(index, chunk);
             toRecv.remove(toRecv.indexOf(index));
         }
     }
 
-    public void pushBuffer() {
+    public void pushBuffer() throws IOException {
+        // Copy hash map
+        HashMap<Integer, byte[]> buffer = new HashMap<>();
+        for (Integer key : recvBuffer.keySet()) {
+            buffer.put(key, recvBuffer.get(key));
+        }
+
+        ArrayList<Integer> keysToRemove = new ArrayList<>();
+
         if (!buffer.isEmpty()) {
-            for (int bufIndex = 0; bufIndex < buffer.size(); bufIndex++) {
-                int i = indices.get(bufIndex);
-                if (i == lastAppended + 1) {
-                    Database.appendChunk(name, buffer.get(bufIndex));
-                    lastAppended = i;
-                }
+            while (buffer.containsKey(lastAppended + 1)) {
+                byte[] c = buffer.get(lastAppended + 1);
+                Database.appendChunk(name, c);
+                bytesAppended += c.length;
+                keysToRemove.add(lastAppended + 1);
+                lastAppended++;
             }
 
-            for (int i = 0; i < buffer.size(); i++) {
-                if (indices.get(i) <= lastAppended) {
-                    buffer.remove(i);
-                    indices.remove(i);
-                }
+            // There is a gap in the buffer
+            if (buffer.containsKey(lastAppended + 2) && lastAppended + 2 < totalCount) {
+                ChunkUploadReq req = new ChunkUploadReq(name, lastAppended + 2, 1);
+                conn.sendUDP(new EncryptedPacket(req));
             }
         }
 
-        if (buffer.isEmpty() && toRecv.isEmpty()) {
+        buffer.clear();
+        for (int i : keysToRemove) {
+            recvBuffer.remove(i);
+        }
+
+        if (recvBuffer.isEmpty() && toRecv.isEmpty()) {
             Logger.log("writes finished, scheduler shutting down...");
             scheduler.shutdown();
             Database.disableAppWrite(name);
@@ -74,15 +98,19 @@ public class UploadBuffer {
         return lastAppended;
     }
 
-    public boolean isDone() {
-        return toRecv.isEmpty() && buffer.isEmpty();
+    public long getBytesAppended() {
+        return bytesAppended;
     }
 
-    public int next(ArrayList<Integer> alreadyExpected) {
+    public boolean isDone() {
+        return (toRecv.isEmpty() && recvBuffer.isEmpty());
+    }
+
+    public int next(List<Integer> alreadyExpected) {
         if (toRecv.isEmpty())
             return -1;
 
-        int next = toRecv.getFirst();
+        int next = toRecv.get(0);
         int i = 0;
         while (alreadyExpected.contains(next)) {
             i++;
@@ -92,7 +120,7 @@ public class UploadBuffer {
         return next;
     }
 
-    public ArrayList<Integer> getToRecv() {
+    public List<Integer> getToRecv() {
         return toRecv;
     }
 }

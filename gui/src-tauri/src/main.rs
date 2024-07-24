@@ -17,7 +17,7 @@ fn remove_dir(dir: String) {
 
 #[tauri::command]
 fn start_exec(path: String) {
-    let e_path = path;
+    let mut e_path = path;
     #[cfg(target_os = "windows")]
     {
         e_path = str::replace(e_path.as_str(), "/", "\\");

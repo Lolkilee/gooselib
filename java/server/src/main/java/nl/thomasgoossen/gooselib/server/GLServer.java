@@ -52,7 +52,7 @@ public class GLServer {
             logger = new Logger(lvl);
             Logger.log("started with admin password: '" + adminPass + "'");
         } else {
-            Logger.log("invalid arguments given, defaulting to password 'admin', and loglevel DEBUG");
+            Logger.log("invalid arguments given, defaulting to password 'admin', and loglevel INFO");
         }
 
         database = new Database(checkFlag(args, "np"));
