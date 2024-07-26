@@ -84,7 +84,7 @@ public class UploadBuffer {
         }
 
         buffer.clear();
-        Logger.log("pushed " + keysToRemove.size() + " chunks to disk");
+        Logger.dbg("pushed " + keysToRemove.size() + " chunks to disk");
         for (int i : keysToRemove) {
             recvBuffer.remove(i);
         }

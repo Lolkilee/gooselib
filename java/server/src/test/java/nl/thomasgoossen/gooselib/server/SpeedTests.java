@@ -1,6 +1,5 @@
 package nl.thomasgoossen.gooselib.server;
 
-import java.util.ArrayList;
 import java.util.Random;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -14,10 +13,11 @@ public class SpeedTests {
     public void chunkWriteSpeed() {
         Database d = new Database(true);
         Database.createOrClearApp("test", "v1", CHUNK_SIZE);
-        ArrayList<byte[]> chunks = getRandomData(CHUNK_SIZE, CHUNK_COUNT);
+        byte[][] chunks = getRandomData(CHUNK_SIZE, CHUNK_COUNT);
 
         long beginTime = System.currentTimeMillis();
-        for (byte[] c : chunks) {
+        for (int i = 0; i < CHUNK_COUNT; i++) {
+            byte[] c = chunks[i];
             Database.appendChunk("test", c);
         }
 
@@ -32,32 +32,33 @@ public class SpeedTests {
     public void chunkReadSpeed() {
         Database d = new Database(true);
         Database.createOrClearApp("testRead", "v1", CHUNK_SIZE);
-        ArrayList<byte[]> chunks = getRandomData(CHUNK_SIZE, CHUNK_COUNT);
+        byte[][] chunks = getRandomData(CHUNK_SIZE, CHUNK_COUNT);
 
-        for (byte[] c : chunks) {
+        for (int i = 0; i < CHUNK_COUNT; i++) {
+            byte[] c = chunks[i];
             Database.appendChunk("testRead", c);
         }
 
-        chunks.clear();
+        chunks = new byte[CHUNK_COUNT][];
         long beginTime = System.currentTimeMillis();
 
         for (int i = 0; i < CHUNK_COUNT; i++) {
-            chunks.add(Database.getChunk("testRead", i));
+            chunks[i] = Database.getChunk("testRead", i);
         }
 
         long endTime = System.currentTimeMillis();
         printResult(endTime - beginTime, "read test");
-        assertTrue(chunks.size() == CHUNK_COUNT);
+        assertTrue(chunks.length == CHUNK_COUNT);
         d.close();
     }
 
-    private ArrayList<byte[]> getRandomData(int chunkSize, int chunkCount) {
-        ArrayList<byte[]> arr = new ArrayList<>();
+    private byte[][] getRandomData(int chunkSize, int chunkCount) {
+        byte[][] arr = new byte[chunkCount][];
         Random r = new Random();
         for (int i = 0; i < chunkCount; i++) {
             byte[] c = new byte[chunkSize];
             r.nextBytes(c);
-            arr.add(c);
+            arr[i] = c;
         }
 
         return arr;

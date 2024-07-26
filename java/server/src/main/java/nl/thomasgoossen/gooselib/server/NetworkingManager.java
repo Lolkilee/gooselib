@@ -46,7 +46,7 @@ public class NetworkingManager {
 
         Logger.log("starting " + tCount + " connection threads");
         for (int i = 0; i < tCount; i++) {
-            Server s = new Server();
+            Server s = new Server(278528, 17408);
             int tcpPort = BEGIN_PORT + i * 2 + 1;
             int udpPort = BEGIN_PORT + i * 2 + 2;
             s.bind(tcpPort, udpPort);
