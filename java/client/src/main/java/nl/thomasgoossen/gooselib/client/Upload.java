@@ -2,17 +2,25 @@ package nl.thomasgoossen.gooselib.client;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.Queue;
 
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
 
+import com.esotericsoftware.kryonet.Connection;
+
+import nl.thomasgoossen.gooselib.shared.EncryptedPacket;
+import nl.thomasgoossen.gooselib.shared.messages.ChunkUploadResp;
 import nl.thomasgoossen.gooselib.shared.messages.UploadReq;
 
 public class Upload {
@@ -23,6 +31,9 @@ public class Upload {
     private static String status = "idle";
 
     private static int chunkCount = 0;
+    private static long totalLength = -1;
+
+    public static final Object ackRecv = new Object();
 
     public static void upload(String password, String folder, String name, String version) {
         curUploadName = name;
@@ -72,11 +83,15 @@ public class Upload {
         long begin = chunkIndex * CHUNK_SIZE;
         long end = begin + CHUNK_SIZE;
 
-        File f = new File(UPLOAD_FILE);
-        if (end >= f.length())
-            end = f.length();
+        if (totalLength < 0) {
+            File f = new File(UPLOAD_FILE);
+            totalLength = f.length();
+        }
 
-        try (RandomAccessFile raf = new RandomAccessFile(f, "r")) {
+        if (end >= totalLength)
+            end = totalLength;
+
+        try (RandomAccessFile raf = new RandomAccessFile(UPLOAD_FILE, "r")) {
             raf.seek(begin);
             long length = end - begin;
             byte[] buff = new byte[(int) length];
@@ -89,6 +104,47 @@ public class Upload {
         }
 
         return null;
+    }
+
+    public static void sendBytes(Connection conn) {
+        File file = new File(UPLOAD_FILE);
+        if (file.exists()) {
+            try (FileInputStream fis = new FileInputStream(file)) {
+                byte[] buff = new byte[CHUNK_SIZE];
+                int bytesRead;
+                int chunkSeq = 0;
+                final int WINDOW_SIZE = 8;
+                Queue<ChunkUploadResp> window = new LinkedList<>();
+
+                while ((bytesRead = fis.read(buff)) != -1) {
+                    byte[] chunk = Arrays.copyOf(buff, bytesRead);
+                    ChunkUploadResp resp = new ChunkUploadResp(curUploadName, chunkSeq, chunk);
+                    window.add(resp);
+                    System.out.println("sending: " + chunkSeq);
+                    conn.sendTCP(new EncryptedPacket(resp));
+
+                    if (window.size() >= WINDOW_SIZE) {
+                        System.out.println("waiting..");
+                        synchronized (ackRecv) {
+                            ackRecv.wait();
+                        }
+                        window.poll();
+                        System.out.println("ack recv");
+                    }
+
+                    chunkSeq++;
+                }
+
+                while (!window.isEmpty()) {
+                    synchronized (ackRecv) {
+                        ackRecv.wait();
+                    }
+                    window.poll();
+                }
+            } catch (IOException | InterruptedException e) {
+                System.out.println(e.getMessage());
+            }
+        }
     }
 
     public static String getStatus() {

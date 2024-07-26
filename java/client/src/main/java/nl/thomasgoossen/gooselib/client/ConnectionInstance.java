@@ -11,8 +11,8 @@ import com.esotericsoftware.kryonet.Listener;
 import nl.thomasgoossen.gooselib.shared.EncryptedPacket;
 import nl.thomasgoossen.gooselib.shared.KryoHelper;
 import nl.thomasgoossen.gooselib.shared.messages.ChunkResp;
+import nl.thomasgoossen.gooselib.shared.messages.ChunkUploadAck;
 import nl.thomasgoossen.gooselib.shared.messages.ChunkUploadReq;
-import nl.thomasgoossen.gooselib.shared.messages.ChunkUploadResp;
 import nl.thomasgoossen.gooselib.shared.messages.HandshakeResp;
 import nl.thomasgoossen.gooselib.shared.messages.LibInfoResp;
 import nl.thomasgoossen.gooselib.shared.messages.UploadCompleteMsg;
@@ -21,17 +21,18 @@ public class ConnectionInstance {
     private static Client client;
     private static SecretKey key;
 
-    private void dataSwitch(Object data) {
+    private void dataSwitch(Object data, Connection conn) {
+        System.out.println("data object in req listener with type: " + data.getClass().getSimpleName());
+        
         if (data instanceof ChunkUploadReq) {
             ChunkUploadReq req = (ChunkUploadReq) data;
             if (req.appName.equals(Upload.getCurUploadName())) {
-                int stop = req.index + req.length;
-                for (int i = req.index; i < stop && i < Upload.getChunkCount(); i++) {
-                    byte[] chunk = Upload.getChunk(i);
-                    ChunkUploadResp resp = new ChunkUploadResp(
-                            Upload.getCurUploadName(), i, chunk);
-                    sendPlainPacketUDP(resp);
-                }
+                Upload.sendBytes(conn);
+            }
+        } else if (data instanceof ChunkUploadAck) {
+            System.out.println("ack in switch");
+            synchronized (Upload.ackRecv) {
+                Upload.ackRecv.notify();
             }
         } else if (data instanceof UploadCompleteMsg) {
             UploadCompleteMsg msg = (UploadCompleteMsg) data;
@@ -57,7 +58,7 @@ public class ConnectionInstance {
                 if (obj instanceof EncryptedPacket) {
                     EncryptedPacket p = (EncryptedPacket) obj;
                     Object data = p.getDataObject(key);
-                    dataSwitch(data);
+                    dataSwitch(data, conn);
                 }
             }
         };
@@ -65,7 +66,7 @@ public class ConnectionInstance {
 
     public ConnectionInstance(String ip, HandshakeResp resp) throws IOException {
         key = resp.getSessionKey();
-        client = new Client();
+        client = new Client(69632, 17408);
         KryoHelper.addRegisters(client.getKryo());
         client.start();
         client.connect(5000, ip, resp.getTCP(), resp.getUDP());

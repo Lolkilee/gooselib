@@ -14,6 +14,7 @@ import nl.thomasgoossen.gooselib.shared.EncryptedPacket;
 import nl.thomasgoossen.gooselib.shared.messages.AuthError;
 import nl.thomasgoossen.gooselib.shared.messages.ChunkReq;
 import nl.thomasgoossen.gooselib.shared.messages.ChunkResp;
+import nl.thomasgoossen.gooselib.shared.messages.ChunkUploadAck;
 import nl.thomasgoossen.gooselib.shared.messages.ChunkUploadReq;
 import nl.thomasgoossen.gooselib.shared.messages.ChunkUploadResp;
 import nl.thomasgoossen.gooselib.shared.messages.ChunksReq;
@@ -27,7 +28,7 @@ import nl.thomasgoossen.gooselib.shared.messages.UploadCompleteMsg;
 import nl.thomasgoossen.gooselib.shared.messages.UploadReq;
 
 public class NetworkingListener extends Listener {
-    private static final int CHUNK_WINDOW = 32; // on request send index + n chunks
+    public static final int CHUNK_WINDOW = 4; // on request send index + n chunks
 
     private final boolean manager;
     private final SecretKey encKey;
@@ -105,16 +106,19 @@ public class NetworkingListener extends Listener {
                 case ChunkUploadResp resp -> {
                     if (uploadBuffers.containsKey(resp.appName)) {
                         Logger.dbg("chunk recv, size " + resp.chunk.length + ", index " + resp.index);
-                        int latest = uploadFinals.get(resp.appName);
-                        if (resp.index >= latest) {
-                            ChunkUploadReq req = new ChunkUploadReq(resp.appName, resp.index + 1, CHUNK_WINDOW);
-                            EncryptedPacket p = new EncryptedPacket(req);
-                            conn.sendTCP(p);
-                            uploadFinals.put(resp.appName, resp.index + CHUNK_WINDOW);
-                        }
+                        //int latest = uploadFinals.get(resp.appName);
+                        // if (resp.index >= latest) {
+                        //     ChunkUploadReq req = new ChunkUploadReq(resp.appName, resp.index + 1, CHUNK_WINDOW);
+                        //     EncryptedPacket p = new EncryptedPacket(req);
+                        //     conn.sendTCP(p);
+                        //     uploadFinals.put(resp.appName, resp.index + CHUNK_WINDOW);
+                        // }
                         
                         UploadBuffer buff = uploadBuffers.get(resp.appName);
                         buff.addToBuffer(resp.index, resp.chunk);
+
+                        ChunkUploadAck ack = new ChunkUploadAck(resp.index);
+                        conn.sendTCP(new EncryptedPacket(ack));
 
                         if (buff.isDone()) {
                             Logger.log("all upload chunks received");
