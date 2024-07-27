@@ -3,6 +3,7 @@ package main
 import (
 	"gooselib/shared"
 	"net"
+	"os"
 	"sync"
 )
 
@@ -17,6 +18,7 @@ func InitSvr(PORT string, TYPE string) {
 	listen, err = net.Listen(TYPE, ":"+PORT)
 	if err != nil {
 		shared.Err(err)
+		os.Exit(1)
 	}
 }
 

@@ -99,5 +99,5 @@ func AuthUser(username, password string) bool {
 		return false
 	}
 
-	return ComparePass(password, u.Hash)
+	return shared.ComparePass(password, u.Hash)
 }

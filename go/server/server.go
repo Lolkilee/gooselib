@@ -35,7 +35,7 @@ func main() {
 
 	InitDB(ReadArguments())
 	PutUser("admin", adminPass)
-	shared.ILog("testing admin pass, result: " + strconv.FormatBool(AuthUser("admin", adminPass)))
+	shared.Log(shared.DEBUG, "testing admin pass, result: "+strconv.FormatBool(AuthUser("admin", adminPass)))
 	defer CloseDB()
 
 	InitSvr(PORT, TYPE)
