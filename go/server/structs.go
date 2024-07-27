@@ -12,7 +12,7 @@ type User struct {
 }
 
 func NewUser(username string, password string) *User {
-	hash, err := HashPassword(password)
+	hash, err := shared.HashPassword(password)
 	if err != nil {
 		shared.Err(err)
 		return nil
