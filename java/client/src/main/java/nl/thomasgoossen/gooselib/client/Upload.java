@@ -9,9 +9,6 @@ import java.io.RandomAccessFile;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.Queue;
 
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
@@ -33,7 +30,8 @@ public class Upload {
     private static int chunkCount = 0;
     private static long totalLength = -1;
 
-    public static final Object ackRecv = new Object();
+    private static int curChunk = -1;
+    private static FileInputStream fis;
 
     public static void upload(String password, String folder, String name, String version) {
         curUploadName = name;
@@ -106,44 +104,26 @@ public class Upload {
         return null;
     }
 
-    public static void sendBytes(Connection conn) {
-        File file = new File(UPLOAD_FILE);
-        if (file.exists()) {
-            try (FileInputStream fis = new FileInputStream(file)) {
-                byte[] buff = new byte[CHUNK_SIZE];
-                int bytesRead;
-                int chunkSeq = 0;
-                final int WINDOW_SIZE = 8;
-                Queue<ChunkUploadResp> window = new LinkedList<>();
+    public static void sendNextBytes(Connection conn) throws IOException {
+        if (fis == null || curChunk == -1) {
+            curChunk = 0;
+            fis = new FileInputStream(UPLOAD_FILE);
+        }
 
-                while ((bytesRead = fis.read(buff)) != -1) {
-                    byte[] chunk = Arrays.copyOf(buff, bytesRead);
-                    ChunkUploadResp resp = new ChunkUploadResp(curUploadName, chunkSeq, chunk);
-                    window.add(resp);
-                    System.out.println("sending: " + chunkSeq);
-                    conn.sendTCP(new EncryptedPacket(resp));
+        byte[] buff = new byte[CHUNK_SIZE];
+        int bRead = fis.read(buff, 0, CHUNK_SIZE);
 
-                    if (window.size() >= WINDOW_SIZE) {
-                        System.out.println("waiting..");
-                        synchronized (ackRecv) {
-                            ackRecv.wait();
-                        }
-                        window.poll();
-                        System.out.println("ack recv");
-                    }
-
-                    chunkSeq++;
-                }
-
-                while (!window.isEmpty()) {
-                    synchronized (ackRecv) {
-                        ackRecv.wait();
-                    }
-                    window.poll();
-                }
-            } catch (IOException | InterruptedException e) {
-                System.out.println(e.getMessage());
+        if (bRead > 0) {
+            byte[] actual = new byte[CHUNK_SIZE];
+            if (bRead < CHUNK_SIZE) {
+                actual = new byte[bRead];
             }
+
+            System.arraycopy(buff, 0, actual, 0, bRead);
+
+            ChunkUploadResp resp = new ChunkUploadResp(curUploadName, curChunk, actual);
+            conn.sendTCP(new EncryptedPacket(resp));
+            curChunk++;
         }
     }
 
@@ -156,6 +136,14 @@ public class Upload {
     }
 
     public static void done() {
+        if (fis != null) {
+            try {
+                fis.close();
+                fis = null;
+            } catch (IOException e) {
+                System.out.println(e.getMessage());
+            }
+        }
         status = "done";
 
         // Cleanup temp file

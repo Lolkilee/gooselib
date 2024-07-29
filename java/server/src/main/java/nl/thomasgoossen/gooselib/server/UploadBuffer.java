@@ -13,7 +13,6 @@ import java.util.concurrent.TimeUnit;
 import com.esotericsoftware.kryonet.Connection;
 
 import nl.thomasgoossen.gooselib.shared.EncryptedPacket;
-import nl.thomasgoossen.gooselib.shared.messages.ChunkUploadReq;
 import nl.thomasgoossen.gooselib.shared.messages.UploadCompleteMsg;
 
 public class UploadBuffer {
@@ -76,11 +75,10 @@ public class UploadBuffer {
                 lastAppended++;
             }
 
-            // There is a gap in the buffer
-            if (buffer.containsKey(lastAppended + 2) && lastAppended + 2 < totalCount) {
-                ChunkUploadReq req = new ChunkUploadReq(name, lastAppended + 2, 1);
-                conn.sendUDP(new EncryptedPacket(req));
-            }
+            // if (buffer.containsKey(lastAppended + 2) && lastAppended + 2 < totalCount) {
+            //     ChunkUploadReq req = new ChunkUploadReq(name, lastAppended + 2, 1);
+            //     conn.sendUDP(new EncryptedPacket(req));
+            // }
         }
 
         buffer.clear();
