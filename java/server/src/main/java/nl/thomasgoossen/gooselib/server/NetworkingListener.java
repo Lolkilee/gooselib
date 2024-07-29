@@ -14,7 +14,6 @@ import nl.thomasgoossen.gooselib.shared.EncryptedPacket;
 import nl.thomasgoossen.gooselib.shared.messages.AuthError;
 import nl.thomasgoossen.gooselib.shared.messages.ChunkReq;
 import nl.thomasgoossen.gooselib.shared.messages.ChunkResp;
-import nl.thomasgoossen.gooselib.shared.messages.ChunkUploadAck;
 import nl.thomasgoossen.gooselib.shared.messages.ChunkUploadReq;
 import nl.thomasgoossen.gooselib.shared.messages.ChunkUploadResp;
 import nl.thomasgoossen.gooselib.shared.messages.ChunksReq;
@@ -99,7 +98,7 @@ public class NetworkingListener extends Listener {
                         uploadBuffers.put(req.appName, new UploadBuffer(req.appName, req.chunkCount, conn));
                         uploadFinals.put(req.appName, CHUNK_WINDOW - 1);
 
-                        EncryptedPacket p = new EncryptedPacket(new ChunkUploadReq(req.appName, 0, CHUNK_WINDOW));
+                        EncryptedPacket p = new EncryptedPacket(new ChunkUploadReq(req.appName));
                         conn.sendTCP(p);
                     }
                 }
@@ -117,14 +116,14 @@ public class NetworkingListener extends Listener {
                         UploadBuffer buff = uploadBuffers.get(resp.appName);
                         buff.addToBuffer(resp.index, resp.chunk);
 
-                        ChunkUploadAck ack = new ChunkUploadAck(resp.index);
-                        conn.sendTCP(new EncryptedPacket(ack));
-
-                        if (buff.isDone()) {
+                        if (resp.index >= buff.totalCount) {
                             Logger.log("all upload chunks received");
                             UploadCompleteMsg msg = new UploadCompleteMsg(buff.totalCount);
                             EncryptedPacket p = new EncryptedPacket(msg, encKey);
                             conn.sendTCP(p);
+                        } else {
+                            ChunkUploadReq req = new ChunkUploadReq(resp.appName);
+                            conn.sendTCP(new EncryptedPacket(req));
                         }
                     }
                 }

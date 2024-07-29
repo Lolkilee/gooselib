@@ -11,7 +11,6 @@ import com.esotericsoftware.kryonet.Listener;
 import nl.thomasgoossen.gooselib.shared.EncryptedPacket;
 import nl.thomasgoossen.gooselib.shared.KryoHelper;
 import nl.thomasgoossen.gooselib.shared.messages.ChunkResp;
-import nl.thomasgoossen.gooselib.shared.messages.ChunkUploadAck;
 import nl.thomasgoossen.gooselib.shared.messages.ChunkUploadReq;
 import nl.thomasgoossen.gooselib.shared.messages.HandshakeResp;
 import nl.thomasgoossen.gooselib.shared.messages.LibInfoResp;
@@ -21,18 +20,15 @@ public class ConnectionInstance {
     private static Client client;
     private static SecretKey key;
 
-    private void dataSwitch(Object data, Connection conn) {
-        System.out.println("data object in req listener with type: " + data.getClass().getSimpleName());
-        
+    private void dataSwitch(Object data, Connection conn) {        
         if (data instanceof ChunkUploadReq) {
             ChunkUploadReq req = (ChunkUploadReq) data;
             if (req.appName.equals(Upload.getCurUploadName())) {
-                Upload.sendBytes(conn);
-            }
-        } else if (data instanceof ChunkUploadAck) {
-            System.out.println("ack in switch");
-            synchronized (Upload.ackRecv) {
-                Upload.ackRecv.notify();
+                try {
+                    Upload.sendNextBytes(conn);
+                } catch (IOException e) {
+                    System.out.println(e.getMessage());
+                }
             }
         } else if (data instanceof UploadCompleteMsg) {
             UploadCompleteMsg msg = (UploadCompleteMsg) data;
