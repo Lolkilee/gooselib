@@ -301,7 +301,7 @@
                                             <Icon icon="mdi:application" />
                                         </div>
                                         <p class="px-4 truncate text-center">
-                                            {app.name}
+                                            {app.name.replaceAll('_', ' ')}
                                         </p>
                                     </div>
                                 </ListBoxItem>

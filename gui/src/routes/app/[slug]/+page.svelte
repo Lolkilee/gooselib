@@ -7,7 +7,12 @@
     } from '$lib/modals.js';
     import { downloadInfoStore } from '$lib/stores.js';
     import { formatBytes } from '$lib/util';
-    import { getModalStore, getToastStore } from '@skeletonlabs/skeleton';
+    import {
+        getDrawerStore,
+        getModalStore,
+        getToastStore,
+        type DrawerSettings,
+    } from '@skeletonlabs/skeleton';
     import { invoke } from '@tauri-apps/api';
 
     export let data;
@@ -24,10 +29,19 @@
     $: needsUpdate = updt;
     $: downloading = downloadingState;
 
+    const drawerStore = getDrawerStore();
+
     downloadInfoStore.subscribe((val) => {
         downloadInfos = val;
         downloadingState = isDownloading();
     });
+
+    function openDownloadDrawer() {
+        const sett: DrawerSettings = {
+            id: 'download-drawer',
+        };
+        drawerStore.open(sett);
+    }
 
     function isDownloading(): boolean {
         for (let i = 0; i < downloadInfos.length; i++) {
@@ -69,6 +83,7 @@
                 data.metaData?.latestVersion,
                 data.installPath
             );
+            openDownloadDrawer();
         }
     }
 
@@ -105,7 +120,7 @@
 
 <div class="flex flex-col justify-between">
     <div>
-        <h1 class="h1 mb-10">{data.slug}</h1>
+        <h1 class="h1 mb-10">{data.slug.replaceAll('_', ' ')}</h1>
         {#if installed && !needsUpdate}
             {#if data.metaData?.execPath != null && data.metaData?.execPath != undefined}
                 <button
@@ -146,7 +161,9 @@
         <p class="text-slate-400">
             App size (compressed): {formatBytes(data.metaData?.bytesCount, 2)}
         </p>
-        <p class="text-slate-400">Install folder: {data.installPath}</p>
+        <p class="text-slate-400">
+            Install folder: {data.installPath.replaceAll('\\', '/')}
+        </p>
         {#if data.metaData?.execPath != null && data.metaData?.execPath != undefined}
             <p class="text-slate-400">
                 Executable path: {data.installPath +

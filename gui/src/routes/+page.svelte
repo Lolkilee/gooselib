@@ -21,7 +21,7 @@
             autoCompleteList = [];
             metaLib.forEach((meta) => {
                 const opt: AutocompleteOption<MetaData> = {
-                    label: meta.name,
+                    label: meta.name.replaceAll('_', ' '),
                     value: meta,
                 };
                 autoCompleteList.push(opt);
@@ -30,7 +30,7 @@
     }
 
     function navigateToPage(appName: string) {
-        const route = `/app/${appName}`;
+        const route = `/app/${appName.replaceAll(' ', '_')}`;
         goto(route);
     }
 
