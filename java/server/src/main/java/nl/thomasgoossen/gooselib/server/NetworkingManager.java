@@ -11,6 +11,7 @@ import javax.crypto.SecretKey;
 import com.esotericsoftware.kryonet.Server;
 
 import nl.thomasgoossen.gooselib.server.dataclasses.ConnectionThreadRecord;
+import nl.thomasgoossen.gooselib.shared.Constants;
 import nl.thomasgoossen.gooselib.shared.EncryptionHelper;
 import nl.thomasgoossen.gooselib.shared.KryoHelper;
 
@@ -46,7 +47,7 @@ public class NetworkingManager {
 
         Logger.log("starting " + tCount + " connection threads");
         for (int i = 0; i < tCount; i++) {
-            Server s = new Server(278528, 17408);
+            Server s = new Server(Constants.BUF_PER_CHUNK * Constants.DEF_CHUNK_WINDOW, Constants.BUF_PER_CHUNK);
             int tcpPort = BEGIN_PORT + i * 2 + 1;
             int udpPort = BEGIN_PORT + i * 2 + 2;
             s.bind(tcpPort, udpPort);

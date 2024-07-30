@@ -205,7 +205,7 @@
     const kaInt = setInterval(keepAliveReq, 1000);
     const udiInt = setInterval(updateDownloadInfo, 100);
     const updateInt = setInterval(updateMeta, 1000);
-    const aliveInt = setInterval(connectedUpdate, 1000);
+    const aliveInt = setInterval(connectedUpdate, 5000);
     onDestroy(() => {
         clearInterval(kaInt);
         clearInterval(udiInt);

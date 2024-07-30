@@ -43,7 +43,7 @@ public class DownloadBuffer {
             } catch (IOException e) {
                 System.out.println(e.getMessage());
             }
-        }, 1000, 5000, TimeUnit.MILLISECONDS);
+        }, 1000, 1000, TimeUnit.MILLISECONDS);
 
         System.out.println("created new download buffer with " + toRecv.size() + " expected chunks");
     }

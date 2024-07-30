@@ -1,5 +1,6 @@
 package nl.thomasgoossen.gooselib.client;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -151,7 +152,7 @@ public class GLClient {
 
     // Path should be formatted between [] brackets, and ! instead of /
     private static Javalin downloadHandler(Javalin app) {
-        return app.post("/download/{appName}/{dst}", ctx -> {
+        return app.post("/download/{appName}/{dst}", (var ctx) -> {
             if (connection != null && metaData != null) {
                 String dst = ctx.pathParam("dst");
                 String appName = ctx.pathParam("appName");
@@ -173,10 +174,14 @@ public class GLClient {
                 System.out.println("downloading to: " + Paths.get(dst).toAbsolutePath());
                 if (appIndex >= 0 && appIndex < metaData.length) {
                     AppMetaData meta = metaData[appIndex];
-                    Download d = new Download(meta, dst);
-                    System.out.println("started download instance with name: "
-                            + d.getName());
                     ctx.result("started download with name " + meta.name);
+                    try {
+                        Download d = new Download(meta, dst);
+                        System.out.println("started download instance with name: "
+                                + d.getName());
+                    } catch (FileNotFoundException e) {
+                        System.out.println(e.getMessage());
+                    }
                 } else {
                     ctx.result("could not start download");
                 }

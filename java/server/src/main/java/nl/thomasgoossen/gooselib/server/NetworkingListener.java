@@ -10,6 +10,7 @@ import com.esotericsoftware.kryonet.FrameworkMessage.KeepAlive;
 import com.esotericsoftware.kryonet.Listener;
 
 import nl.thomasgoossen.gooselib.shared.AppMetaData;
+import nl.thomasgoossen.gooselib.shared.Constants;
 import nl.thomasgoossen.gooselib.shared.EncryptedPacket;
 import nl.thomasgoossen.gooselib.shared.messages.AuthError;
 import nl.thomasgoossen.gooselib.shared.messages.ChunkReq;
@@ -88,7 +89,7 @@ public class NetworkingListener extends Listener {
                         ChunkResp resp = new ChunkResp(req.appName, req.index, c);
                         EncryptedPacket p = new EncryptedPacket(resp);
                         Logger.dbg("sending chunk " + (req.index) + " for app " + req.appName);
-                        conn.sendUDP(p);
+                        conn.sendTCP(p);
                     }
                 }
                 case UploadReq req -> {
@@ -98,8 +99,10 @@ public class NetworkingListener extends Listener {
                         uploadBuffers.put(req.appName, new UploadBuffer(req.appName, req.chunkCount, conn));
                         uploadFinals.put(req.appName, CHUNK_WINDOW - 1);
 
-                        EncryptedPacket p = new EncryptedPacket(new ChunkUploadReq(req.appName));
-                        conn.sendTCP(p);
+                        for (int i = 0; i < Constants.DEF_CHUNK_WINDOW; i++) {
+                            EncryptedPacket p = new EncryptedPacket(new ChunkUploadReq(req.appName));
+                            conn.sendTCP(p);
+                        }
                     }
                 }
                 case ChunkUploadResp resp -> {
