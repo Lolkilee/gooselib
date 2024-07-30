@@ -17,7 +17,7 @@
     <h1 class="h2 mb-10">Downloads</h1>
     {#each infos as info}
         <div class="flex card p-4 my-2 justify-between">
-            <p class="pt-2">{info.appName}</p>
+            <p class="pt-2">{info.appName.replaceAll('_', ' ')}</p>
             <div class="flex py-2 w-3/4">
                 {#if info.netwProgress != 1}
                     <p class="pr-10 w-1/4">{formatBytes(info.speed)}/s</p>
@@ -32,7 +32,7 @@
                     />
                     <ProgressBar
                         meter="col-start-1 row-start-1 variant-filled-primary"
-                        value={info.writeProgress * 100}
+                        value={Math.max(0.01, info.writeProgress * 100)}
                         max={100}
                     />
                 </div>
