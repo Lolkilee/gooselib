@@ -20,11 +20,12 @@ import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 
 import nl.thomasgoossen.gooselib.shared.AppMetaData;
-import nl.thomasgoossen.gooselib.shared.messages.ChunksReq;
+import nl.thomasgoossen.gooselib.shared.Constants;
+import nl.thomasgoossen.gooselib.shared.messages.ChunkReq;
 
 public class Download {
     private final static String DL_FILE = "./temp.tar.gz";
-    private final static int REQ_WINDOW = 32;
+    private final static int CHUNK_WINDOW = Constants.DEF_CHUNK_WINDOW;
 
     private final static HashMap<String, Download> instances = new HashMap<>();
 
@@ -55,9 +56,11 @@ public class Download {
         Download d = this;
         instances.put(meta.name, d);
 
-        ChunksReq req = new ChunksReq(appName, next, REQ_WINDOW);
-        GLClient.sendPlainPacketTCP(req);
-        next = REQ_WINDOW - 1;
+        for (int i = 0; i < CHUNK_WINDOW; i++) {
+            ChunkReq req = new ChunkReq(appName, next);
+            GLClient.sendPlainPacketTCP(req);
+            next++;
+        }
 
         beginTime = System.currentTimeMillis();
     }
@@ -140,10 +143,10 @@ public class Download {
             d.addChunk(index, bytes);
             d.bytesRecv += bytes.length;
 
-            if (index == d.next) {
-                ChunksReq req = new ChunksReq(d.appName, d.next + 1, REQ_WINDOW);
+            if (d.next < d.totalChunkCount) {
+                ChunkReq req = new ChunkReq(d.appName, d.next);
                 GLClient.sendPacketTCP(req);
-                d.next += REQ_WINDOW;
+                d.next++;
             }
         }
     }

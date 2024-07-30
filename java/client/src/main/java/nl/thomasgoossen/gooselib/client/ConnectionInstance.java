@@ -8,6 +8,7 @@ import com.esotericsoftware.kryonet.Client;
 import com.esotericsoftware.kryonet.Connection;
 import com.esotericsoftware.kryonet.Listener;
 
+import nl.thomasgoossen.gooselib.shared.Constants;
 import nl.thomasgoossen.gooselib.shared.EncryptedPacket;
 import nl.thomasgoossen.gooselib.shared.KryoHelper;
 import nl.thomasgoossen.gooselib.shared.messages.ChunkResp;
@@ -62,7 +63,7 @@ public class ConnectionInstance {
 
     public ConnectionInstance(String ip, HandshakeResp resp) throws IOException {
         key = resp.getSessionKey();
-        client = new Client(69632, 17408);
+        client = new Client(Constants.BUF_PER_CHUNK * Constants.DEF_CHUNK_WINDOW, Constants.BUF_PER_CHUNK);
         KryoHelper.addRegisters(client.getKryo());
         client.start();
         client.connect(5000, ip, resp.getTCP(), resp.getUDP());
