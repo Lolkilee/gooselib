@@ -10,6 +10,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 
 import nl.thomasgoossen.gooselib.server.Logger;
+import nl.thomasgoossen.gooselib.server.UploadBuffer;
 import nl.thomasgoossen.gooselib.shared.AppMetaData;
 
 public class AppDefinition implements Serializable {
@@ -23,14 +24,11 @@ public class AppDefinition implements Serializable {
     private final int chunkSize;
     private long bytesCount = 0;
 
-    private transient boolean readMode = true;
-
     public AppDefinition(String name, String version, int chunkSize) {
         this.name = name;
         this.chunksPath = APPS_FOLDER + name + ".bin";
         this.curVersion = version;
         this.chunkSize = chunkSize;
-        this.readMode = true;
 
         if (!Files.exists(Paths.get(APPS_FOLDER))) {
             try {
@@ -57,8 +55,6 @@ public class AppDefinition implements Serializable {
     }
 
     public byte[] getChunk(int i) throws IOException {
-        disableWrites();
-
         long offset = i * chunkSize;
         int len = chunkSize;
         if (offset + len > bytesCount)
@@ -115,12 +111,8 @@ public class AppDefinition implements Serializable {
                 this.execPath, getChunkCount(), this.bytesCount);
     }
 
-    public void disableWrites() {
-        this.readMode = true;
-    }
-
     public boolean getIsPublic() {
-        return true;
+        return !UploadBuffer.isUploading(name);
     }
 
     public String getExecPath() {
