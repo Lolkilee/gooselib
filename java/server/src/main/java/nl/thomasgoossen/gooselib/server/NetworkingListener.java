@@ -35,7 +35,6 @@ public class NetworkingListener extends Listener {
 
     // Initial upload reqs to be sent
     private final HashMap<String, UploadBuffer> uploadBuffers = new HashMap<>();
-    private final HashMap<String, Integer> uploadFinals = new HashMap<>();
 
     // Manager constructor
     public NetworkingListener() {
@@ -97,7 +96,6 @@ public class NetworkingListener extends Listener {
                         Logger.log("upload req recv, sending chunk upload requests");
                         Database.createOrClearApp(req.appName, req.version, req.chunkSize);
                         uploadBuffers.put(req.appName, new UploadBuffer(req.appName, req.chunkCount, conn));
-                        uploadFinals.put(req.appName, CHUNK_WINDOW - 1);
 
                         for (int i = 0; i < Constants.DEF_CHUNK_WINDOW; i++) {
                             EncryptedPacket p = new EncryptedPacket(new ChunkUploadReq(req.appName));
