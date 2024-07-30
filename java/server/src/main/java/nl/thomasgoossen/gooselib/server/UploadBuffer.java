@@ -27,6 +27,8 @@ public class UploadBuffer {
 
     public final ScheduledExecutorService scheduler;
 
+    private static final List<String> uploadingApps = Collections.synchronizedList(new ArrayList<>());
+
     public UploadBuffer(String name, int totalCount, Connection conn) {
         this.name = name;
         this.totalCount = totalCount;
@@ -38,6 +40,8 @@ public class UploadBuffer {
         for (int i = 0; i < totalCount; i++) {
             toRecv.add(i);
         }
+
+        uploadingApps.add(name);
 
         scheduler.scheduleAtFixedRate(() -> {
             try {
@@ -89,8 +93,13 @@ public class UploadBuffer {
 
         if (recvBuffer.isEmpty() && toRecv.isEmpty()) {
             Logger.log("writes finished, scheduler shutting down...");
+            if (uploadingApps.contains(name)) {
+                uploadingApps.remove(uploadingApps.indexOf(name));
+            } else {
+                Logger.warn("could not remove '" + name + "' from uploading list");
+            }
+
             scheduler.shutdown();
-            Database.disableAppWrite(name);
             Logger.log("sending completion message");
             UploadCompleteMsg msg = new UploadCompleteMsg(totalCount);
             EncryptedPacket p = new EncryptedPacket(msg);
@@ -126,5 +135,9 @@ public class UploadBuffer {
 
     public List<Integer> getToRecv() {
         return toRecv;
+    }
+
+    public static boolean isUploading(String name) {
+        return uploadingApps.contains(name);
     }
 }

@@ -252,18 +252,6 @@ public class Database {
     }
 
     /**
-     * Disables the app write stream and opens the read stream
-     * @param name app name
-     */
-    public static void disableAppWrite(String name) {
-        if (appMap.containsKey(name)) {
-            AppDefinition def = appMap.get(name);
-            def.disableWrites();
-            appMap.put(name, def);
-        }
-    }
-
-    /**
      * Returns null if app not present
      * @param name app name
      * @return AppDefinition object
