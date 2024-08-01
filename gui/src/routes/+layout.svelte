@@ -39,7 +39,9 @@
     } from '$lib/metadata';
 
     import {
+        consoleLineStore,
         downloadInfoStore,
+        javaLineStore,
         metaLibStore,
         selectedMetaStore,
     } from '$lib/stores';
@@ -144,8 +146,14 @@
                 resourcePath,
             ]);
 
-            comm.stdout.on('data', (line) => console.log(line));
-            comm.stderr.on('data', (line) => console.log(line));
+            comm.stdout.on('data', (line) => {
+                if (line != '') javaLineStore.update((arr) => [...arr, line]);
+                console.log(line);
+            });
+            comm.stderr.on('data', (line) => {
+                if (line != '') javaLineStore.update((arr) => [...arr, line]);
+                console.log(line);
+            });
 
             clientProc = await comm.spawn();
             await new Promise((r) => setTimeout(r, 1000));
@@ -221,6 +229,15 @@
     function navigateToPage(appName: string) {
         const route = `/app/${appName}`;
         goto(route);
+    }
+
+    async function navigateToExtPage(path: string) {
+        selected = null;
+        try {
+            await goto(path);
+        } catch (err) {
+            console.log(err);
+        }
     }
 
     function openDownloadDrawer() {
@@ -313,9 +330,12 @@
                 </div>
             </div>
         </svelte:fragment>
+        <div class="card m-6 p-6 h-full max-h-[87vh] variant-soft">
+            <slot />
+        </div>
         <svelte:fragment slot="pageFooter">
             <div class="flex justify-between">
-                <div class="mt-9 mx-6 mb-1">
+                <div class="mx-6 mb-1">
                     <button
                         type="button"
                         class="btn variant-filled"
@@ -335,6 +355,15 @@
                     </button>
                     <button
                         type="button"
+                        class="btn variant-filled"
+                        on:click={async () => {
+                            await navigateToExtPage('/console');
+                        }}
+                    >
+                        <Icon icon="material-symbols:terminal-sharp" />
+                    </button>
+                    <button
+                        type="button"
                         class="btn variant-filled-error"
                         on:click={() => {
                             logout();
@@ -343,13 +372,10 @@
                         <Icon icon="material-symbols:logout" />
                     </button>
                 </div>
-                <p class="mt-12 text-right text-slate-600">
+                <p class="mt-2 mr-3 text-right text-slate-600">
                     Gooselib v{appVersion}
                 </p>
             </div>
         </svelte:fragment>
-        <div class="card m-6 p-6 h-full variant-soft">
-            <slot />
-        </div>
     </AppShell>
 </div>
