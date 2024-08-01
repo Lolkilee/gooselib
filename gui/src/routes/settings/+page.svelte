@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { SlideToggle } from '@skeletonlabs/skeleton';
     import { open } from '@tauri-apps/api/dialog';
 
     const themes = [

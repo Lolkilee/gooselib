@@ -60,6 +60,7 @@ public class NetworkingTest {
         try {
             setupServer();
             assertTrue(NetworkingManager.isRunning());
+            Thread.sleep(100);
 
             Client c = createTestClient();
             c.addListener(new Listener() {

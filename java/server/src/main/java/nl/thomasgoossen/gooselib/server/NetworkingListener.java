@@ -22,6 +22,7 @@ import nl.thomasgoossen.gooselib.shared.messages.HandshakeReq;
 import nl.thomasgoossen.gooselib.shared.messages.HandshakeResp;
 import nl.thomasgoossen.gooselib.shared.messages.LibInfoReq;
 import nl.thomasgoossen.gooselib.shared.messages.LibInfoResp;
+import nl.thomasgoossen.gooselib.shared.messages.PutUserReq;
 import nl.thomasgoossen.gooselib.shared.messages.SetExecPathReq;
 import nl.thomasgoossen.gooselib.shared.messages.ShutdownReq;
 import nl.thomasgoossen.gooselib.shared.messages.UploadCompleteMsg;
@@ -140,6 +141,12 @@ public class NetworkingListener extends Listener {
                 case SetExecPathReq req -> {
                     if (Database.auth("admin", req.getAdminPass())) {
                         Database.setExecPath(req.appName, req.execPath);
+                    }
+                }
+                case PutUserReq req -> {
+                    if (Database.auth("admin", req.getAdminPass())) {
+                        Logger.log("putting user '" + req.username + "' in database");
+                        Database.putUser(req.username, req.getPass());
                     }
                 }
                 default -> Logger.warn("deserialized data was not recognized by onRequest()");

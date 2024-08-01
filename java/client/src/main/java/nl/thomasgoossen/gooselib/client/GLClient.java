@@ -17,6 +17,7 @@ import io.javalin.Javalin;
 import nl.thomasgoossen.gooselib.shared.AppMetaData;
 import nl.thomasgoossen.gooselib.shared.messages.HandshakeResp;
 import nl.thomasgoossen.gooselib.shared.messages.LibInfoReq;
+import nl.thomasgoossen.gooselib.shared.messages.PutUserReq;
 import nl.thomasgoossen.gooselib.shared.messages.SetExecPathReq;
 
 public class GLClient {
@@ -48,6 +49,7 @@ public class GLClient {
         app = metaDataHandler(app);
         app = connectionStatusHandler(app);
         app = setExecPathHandler(app);
+        app = putUserHandler(app);
         app.start(PORT);
 
         Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -279,6 +281,17 @@ public class GLClient {
             SetExecPathReq req = new SetExecPathReq(appName, path, adminPass);
             sendPacketTCP(req);
             ctx.result("sent request");
+        });
+    }
+
+    private static Javalin putUserHandler(Javalin app) {
+        return app.post("/put-user/{username}/{pass}/{adminPass}", ctx -> {
+            String usr = ctx.pathParam("username");
+            String pass = ctx.pathParam("pass");
+            String adminPass = ctx.pathParam("adminPass");
+            PutUserReq req = new PutUserReq(adminPass, usr, pass);
+            sendPacketTCP(req);
+            ctx.result("sent put user request");
         });
     }
 
