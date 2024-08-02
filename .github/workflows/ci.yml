@@ -29,10 +29,11 @@ jobs:
       - name: Build Gradle project
         run: |
             if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-                ./java/gradlew.bat client:shadowJar
+                ./gradlew.bat client:shadowJar
             else
-                ./java/gradlew client:shadowJar
+                ./gradlew client:shadowJar
             fi
+        working-directory: ./java
 
       - name: Create destination directory
         run: mkdir -p ./gui/src-tauri/java
