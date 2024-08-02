@@ -39,6 +39,9 @@ jobs:
       - name: Create destination directory
         run: mkdir -p ./gui/src-tauri/java
 
+      - name: Print folder structure
+        run: ls ./java/client/build/libs/
+
       - name: Move generated JAR on Linux and macOS
         if: runner.os != 'Windows'
         run: mv ./java/client/build/libs/gooselib-client.jar ./gui/src-tauri/java/gooselib-client.jar
