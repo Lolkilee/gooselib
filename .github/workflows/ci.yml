@@ -33,7 +33,6 @@ jobs:
             else
                 ./java/gradlew client:shadowJar
             fi
-        working-directory: ./java
 
       - name: Create destination directory
         run: mkdir -p ./gui/src-tauri/java
