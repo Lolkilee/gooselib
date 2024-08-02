@@ -199,10 +199,11 @@ public class GLClient {
 
     // Path should be formatted between [] brackets, and ! instead of /, * instead of :
     private static Javalin uploadHandler(Javalin app) {
-        return app.post("/upload/{path}/{name}", ctx -> {
+        return app.post("/upload/{path}/{name}/{adminPass}", ctx -> {
             if (connection != null) {
                 String path = ctx.pathParam("path");
                 String name = ctx.pathParam("name");
+                String adminPass = ctx.pathParam("adminPass");
                 String version = new SimpleDateFormat("dd-MM HH:mm:ss").format(new Date());
 
                 path = path.replace("[", "");
@@ -219,7 +220,7 @@ public class GLClient {
                 if (Files.isDirectory(Paths.get(path))) {
                     ctx.result("starting upload");
                     new Thread(() -> {
-                        Upload.upload(password, lPath, name, version);
+                        Upload.upload(adminPass, lPath, name, version);
                     }).start();
                 } else {
                     String absPath = Paths.get(lPath).toAbsolutePath().toString();

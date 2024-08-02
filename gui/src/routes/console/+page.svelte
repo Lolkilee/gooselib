@@ -1,6 +1,7 @@
 <script lang="ts">
+    import { BASE_URL } from '$lib/login';
     import { consoleLineStore, javaLineStore } from '$lib/stores';
-    import { onMount } from 'svelte';
+    import { fetch, ResponseType } from '@tauri-apps/api/http';
 
     type Command = {
         name: string;
@@ -24,6 +25,24 @@
             description: 'prints the full process log of the java subclient',
             call: showJavaLog,
         },
+        {
+            name: 'put-user',
+            description:
+                '<username> <password> <admin password>; sends a put user request to the server',
+            call: putUser,
+        },
+        {
+            name: 'set-exec',
+            description:
+                '<app name> <relative path> <admin password>; sends a set executable request to the server',
+            call: setExecPath,
+        },
+        {
+            name: 'upload',
+            description:
+                '<path> <app name> <admin password>; tries to start an upload with given arguments',
+            call: uploadCommand,
+        },
     ];
 
     let command = '';
@@ -37,6 +56,18 @@
     javaLineStore.subscribe((val) => {
         javaLog = val;
     });
+
+    function formatPath(path: string): string {
+        return (
+            '[' +
+            path
+                .replaceAll('/', '!')
+                .replaceAll('\\', '!')
+                .replaceAll(':', '*')
+                .replaceAll('_', ' ') +
+            ']'
+        );
+    }
 
     function parseCommand(line: string[]) {
         let executed = false;
@@ -82,6 +113,91 @@
         javaLog.forEach((line) => {
             addLine(line);
         });
+    }
+
+    async function putUser(args: string[]) {
+        if (args.length != 4) {
+            addLine(
+                "invalid arguments, expected 'put-user <username> <password> <admin password>'"
+            );
+            return;
+        }
+
+        const username = args[1];
+        const password = args[2];
+        const adminPass = args[3];
+
+        const url =
+            BASE_URL +
+            'put-user/' +
+            username +
+            '/' +
+            password +
+            '/' +
+            adminPass;
+
+        const resp = await fetch(url, {
+            method: 'POST',
+            responseType: ResponseType.Text,
+        });
+
+        //@ts-ignore
+        addLine(resp.data);
+    }
+
+    async function setExecPath(args: string[]) {
+        if (args.length != 4) {
+            addLine(
+                "invalid arguments, expected 'set-exec <app name> <relative path> <admin password>'"
+            );
+            return;
+        }
+
+        const appName = args[1];
+        const path = args[2];
+        const adminPass = args[3];
+
+        const formPath = formatPath(path);
+
+        const url =
+            BASE_URL +
+            'set-exec-path/' +
+            appName +
+            '/' +
+            formPath +
+            '/' +
+            adminPass;
+
+        const resp = await fetch(url, {
+            method: 'POST',
+            responseType: ResponseType.Text,
+        });
+
+        //@ts-ignore
+        addLine(resp.data);
+    }
+
+    async function uploadCommand(args: string[]) {
+        if (args.length != 4) {
+            addLine(
+                "invalid arguments, expected 'upload <path> <app name> <admin password>'"
+            );
+            return;
+        }
+
+        const path = formatPath(args[1]);
+        const name = args[2];
+        const adminPass = args[3];
+
+        const url = BASE_URL + 'upload/' + path + '/' + name + '/' + adminPass;
+
+        const resp = await fetch(url, {
+            method: 'POST',
+            responseType: ResponseType.Text,
+        });
+
+        //@ts-ignore
+        addLine(resp.data);
     }
 </script>
 

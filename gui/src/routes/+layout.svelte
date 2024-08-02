@@ -147,11 +147,17 @@
             ]);
 
             comm.stdout.on('data', (line) => {
-                if (line != '') javaLineStore.update((arr) => [...arr, line]);
+                if (line != '') {
+                    line.replace('\n', '');
+                    javaLineStore.update((arr) => [...arr, line]);
+                }
                 console.log(line);
             });
             comm.stderr.on('data', (line) => {
-                if (line != '') javaLineStore.update((arr) => [...arr, line]);
+                if (line != '') {
+                    line.replace('\n', '');
+                    javaLineStore.update((arr) => [...arr, line]);
+                }
                 console.log(line);
             });
 
