@@ -38,9 +38,6 @@ jobs:
 
       - name: Create destination directory
         run: mkdir -p ./gui/src-tauri/java
-        
-      - name: Create destination directory
-        run: mkdir -p ./gui/src-tauri/java
 
       - name: Move generated JAR on Linux and macOS
         if: runner.os != 'Windows'
