@@ -26,14 +26,27 @@ jobs:
         if: runner.os != 'Windows'
         run: chmod +x ./java/gradlew
 
-      - name: Build Gradle project
-        run: |
-            if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-                ./gradlew.bat client:shadowJar
-            else
-                ./gradlew client:shadowJar
-            fi
+      - name: Build Gradle project on Linux and macOS
+        if: runner.os != 'Windows'
+        run: ./gradlew client:shadowJar
         working-directory: ./java
+
+      - name: Build Gradle project on Windows
+        if: runner.os == 'Windows'
+        run: ./gradlew.bat client:shadowJar
+        working-directory: ./java
+
+      - name: Create destination directory
+        run: mkdir -p ./gui/src-tauri/java
+
+      - name: Move generated JAR on Linux and macOS
+        if: runner.os != 'Windows'
+        run: mv ./java/client/build/libs/gooselib-client.jar ./gui/src-tauri/java/gooselib-client.jar
+
+      - name: Move generated JAR on Windows
+        if: runner.os == 'Windows'
+        run: mv .\java\client\build\libs\gooselib-client.jar .\gui\src-tauri\java\gooselib-client.jar
+
 
       - name: Create destination directory
         run: mkdir -p ./gui/src-tauri/java
