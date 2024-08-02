@@ -22,8 +22,17 @@ jobs:
           java-version: '11'
           distribution: 'adopt'
 
+      - name: Ensure Gradle wrapper is executable (Linux and macOS)
+        if: runner.os != 'Windows'
+        run: chmod +x ./java/gradlew
+
       - name: Build Gradle project
-        run: ./java/gradlew client:shadowJar
+        run: |
+            if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+                ./java/gradlew.bat client:shadowJar
+            else
+                ./java/gradlew client:shadowJar
+            fi
         working-directory: ./java
 
       - name: Create destination directory
