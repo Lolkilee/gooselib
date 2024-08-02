@@ -166,9 +166,9 @@
         </p>
         {#if data.metaData?.execPath != null && data.metaData?.execPath != undefined}
             <p class="text-slate-400">
-                Executable path: {data.installPath +
+                Executable path: {data.installPath.replaceAll('\\', '/') +
                     '/' +
-                    data.metaData?.execPath}
+                    data.metaData?.execPath.replace('./', '')}
             </p>
         {/if}
     </div>
