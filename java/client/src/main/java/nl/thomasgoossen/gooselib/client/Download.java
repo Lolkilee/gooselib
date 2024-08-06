@@ -28,7 +28,8 @@ public class Download {
     private final static int CHUNK_WINDOW = Constants.DEF_CHUNK_WINDOW;
 
     private final static HashMap<String, Download> instances = new HashMap<>();
-
+    
+    private final AppMetaData meta;
     private final int totalChunkCount;
     private final FileOutputStream fos;
     private final DownloadBuffer buff;
@@ -44,22 +45,52 @@ public class Download {
     public volatile int next = 0;
 
     public Download(AppMetaData meta, String folder) throws FileNotFoundException {
+        this.meta = meta;
         this.appName = meta.name;
         this.totalChunkCount = meta.chunkCount;
         this.folder = folder;
         this.scheduler = Executors.newScheduledThreadPool(1);
 
         path = DL_FILE.replace("temp", meta.name);
-        fos = new FileOutputStream(path);
-        this.buff = new DownloadBuffer(meta.name, totalChunkCount, fos);
+        boolean appendMode = false;
+        boolean skip = false;
+        int chunkOffset = 0;
+        if (Files.exists(Paths.get(path))) {
+            System.out.println("Previous download already present, attempting to reconstruct...");
+            try {
+                long l = Files.size(Paths.get(path));
+                if (l % Upload.CHUNK_SIZE == 0) {
+                    chunkOffset = (int) (l / (long) Upload.CHUNK_SIZE);
+                    appendMode = true;
+                    System.out.println("Valid reconstruction, starting from index " + chunkOffset);
+                } else if (l == meta.bytesCount) {
+                    System.out.println("Full download already detected, skipping to installation");
+                    appendMode = true;
+                    chunkOffset = totalChunkCount - 1;
+                    skip = true;
+                } else {
+                    System.out.println("Existing file not in valid chunks");
+                }
+            } catch (IOException e) {
+                System.out.println("reconstruction failed; " + e.getMessage());
+            }
+        }
+
+        next = chunkOffset;
+
+        this.fos = new FileOutputStream(path, appendMode);
+        this.buff = new DownloadBuffer(meta.name, totalChunkCount, fos, chunkOffset - 1);
 
         Download d = this;
         instances.put(meta.name, d);
 
-        for (int i = 0; i < CHUNK_WINDOW; i++) {
-            ChunkReq req = new ChunkReq(appName, next);
-            GLClient.sendPlainPacketTCP(req);
-            next++;
+        if (!skip) {
+            System.out.println("Sending first request with index: " + next);
+            for (int i = 0; i < CHUNK_WINDOW; i++) {
+                ChunkReq req = new ChunkReq(appName, next);
+                GLClient.sendPlainPacketTCP(req);
+                next++;
+            }
         }
 
         beginTime = System.currentTimeMillis();
@@ -71,7 +102,8 @@ public class Download {
                 BufferedInputStream bis = new BufferedInputStream(fis);
                 GzipCompressorInputStream gzis = new GzipCompressorInputStream(bis);
                 TarArchiveInputStream tais = new TarArchiveInputStream(gzis)) {
-
+            
+            System.out.println("expected decompression size: " + meta.bytesCount + ", actual: " + Files.size(Paths.get(path)));
             TarArchiveEntry entry;
             while ((entry = tais.getNextTarEntry()) != null) {
                 Path outputPath = destPath.resolve(entry.getName());
@@ -81,7 +113,7 @@ public class Download {
                 } else {
                     Files.createDirectories(outputPath.getParent());
                     try (OutputStream os = Files.newOutputStream(outputPath)) {
-                        byte[] outArr = new byte[1024];
+                        byte[] outArr = new byte[16384];
                         int len;
                         while ((len = tais.read(outArr)) != -1) {
                             os.write(outArr, 0, len);
@@ -90,7 +122,7 @@ public class Download {
                 }
             }
         } catch (IOException e) {
-            System.out.println(e.getMessage());
+            System.out.println("error decompressing: " + e.getMessage());
         }
     }
 

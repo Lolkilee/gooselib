@@ -137,6 +137,9 @@
             >
         {:else if needsUpdate}
             <button class="btn variant-filled-primary mb-10 mx-3">Run</button>
+            <button class="btn variant-filled mb-10 mx-3" on:click={openFolder}
+                >Open</button
+            >
             <button
                 class="btn variant-filled-warning mb-10"
                 on:click={updateStart}>Update</button

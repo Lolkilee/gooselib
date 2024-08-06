@@ -11,8 +11,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import nl.thomasgoossen.gooselib.shared.messages.ChunkReq;
-
 public class DownloadBuffer {
     public final int totalCount;
 
@@ -25,15 +23,20 @@ public class DownloadBuffer {
 
     public final ScheduledExecutorService scheduler;
 
-    public DownloadBuffer(String name, int totalCount, FileOutputStream fos) {
+    public DownloadBuffer(String name, int totalCount, FileOutputStream fos, int laOffset) {
         this.name = name;
         this.totalCount = totalCount;
         this.toRecv = Collections.synchronizedList(new ArrayList<>());
         this.recvBuffer = new ConcurrentHashMap<>();
         this.scheduler = Executors.newScheduledThreadPool(1);
         this.fos = fos;
+        this.lastAppended = laOffset;
 
-        for (int i = 0; i < totalCount; i++) {
+        int offset = 0;
+        if (laOffset > 0)
+            offset = laOffset + 1;
+
+        for (int i = offset; i < totalCount; i++) {
             toRecv.add(i);
         }
 
@@ -50,6 +53,10 @@ public class DownloadBuffer {
 
     public void addToBuffer(int index, byte[] chunk) {
         if (toRecv.contains(index)) {
+            if (index == totalCount - 1) {
+                System.out.println("last chunk received!");
+            }
+
             recvBuffer.put(index, chunk);
             toRecv.remove(toRecv.indexOf(index));
         }
@@ -72,12 +79,6 @@ public class DownloadBuffer {
                 keysToRemove.add(lastAppended + 1);
                 lastAppended++;
             }
-
-            // There is a gap in the buffer
-            if (buffer.containsKey(lastAppended + 2) && lastAppended + 2 < totalCount) {
-                ChunkReq req = new ChunkReq(name, lastAppended + 2);
-                GLClient.sendPlainPacketUDP(req);
-            }
         }
 
         buffer.clear();
@@ -85,8 +86,22 @@ public class DownloadBuffer {
             recvBuffer.remove(i);
         }
 
-        if (recvBuffer.isEmpty() && toRecv.isEmpty()) {
-            fos.close();
+        if (lastAppended == totalCount - 1) {
+            try (fos) {
+                if (!toRecv.isEmpty()) {
+                    System.out.println("toRecv should be emtpy yet contains: ");
+                    for (int index : toRecv) {
+                        System.out.println(index);
+                    }
+                }
+
+                if (!recvBuffer.isEmpty()) {
+                    System.out.println("recvBuffer should be empty yet contains: ");
+                    for (int index : recvBuffer.keySet()) {
+                        System.out.println(index);
+                    }
+                }
+            }
             System.out.println("writes finished, scheduler shutting down...");
             scheduler.shutdown();
             Download.finish(name);

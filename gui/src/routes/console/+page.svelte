@@ -64,7 +64,8 @@
                 .replaceAll('/', '!')
                 .replaceAll('\\', '!')
                 .replaceAll(':', '*')
-                .replaceAll('_', ' ') +
+                .replaceAll('_', ' ')
+                .replaceAll('%', '_') +
             ']'
         );
     }

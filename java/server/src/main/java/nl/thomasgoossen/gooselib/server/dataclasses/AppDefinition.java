@@ -55,7 +55,7 @@ public class AppDefinition implements Serializable {
     }
 
     public byte[] getChunk(int i) throws IOException {
-        long offset = i * chunkSize;
+        long offset = (long) i * (long) chunkSize;
         int len = chunkSize;
         if (offset + len > bytesCount)
             len = (int) (bytesCount % (long) chunkSize);
@@ -124,6 +124,10 @@ public class AppDefinition implements Serializable {
     }
 
     private static byte[] readChunk(String path, long start, int length) throws IOException {
+        if (start < 0) {
+            throw new IllegalArgumentException("Invalid start value: " + start);
+        }
+
         try (RandomAccessFile file = new RandomAccessFile(path, "r")) {
             file.seek(start);
             byte[] buffer = new byte[length];

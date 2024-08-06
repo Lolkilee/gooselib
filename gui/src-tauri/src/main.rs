@@ -1,7 +1,7 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::{fs, path::Path, process::Command};
+use std::{error::Error, fs, io::Read, path::Path, process::Command};
 
 use tauri::Manager;
 
@@ -17,13 +17,19 @@ fn remove_dir(dir: String) {
 
 #[tauri::command]
 fn start_exec(path: String) {
-    let mut e_path = path;
+    let mut e_path = path.clone();
     #[cfg(target_os = "windows")]
     {
-        e_path = str::replace(e_path.as_str(), "/", "\\");
+        e_path = e_path.replace("/", "\\");
     }
     println!("{}", e_path);
-    let _ = Command::new(e_path).spawn();
+
+    let path_obj = Path::new(&e_path);
+    if let Some(parent_dir) = path_obj.parent() {
+        let _ = Command::new(&e_path).current_dir(parent_dir).spawn();
+    } else {
+        println!("Error: Could not determine the parent directory.");
+    }
 }
 
 #[tauri::command]
@@ -47,6 +53,14 @@ fn open_path(path: String) {
     {
         Command::new("xdg-open").arg(path).spawn().unwrap();
     }
+}
+
+fn stop_backend() -> Result<(), Box<dyn Error>> {
+    let mut res = reqwest::blocking::get("http://localhost:7123/stop")?;
+    let mut body = String::new();
+    res.read_to_string(&mut body)?;
+    println!("Body:\n{}", body);
+    Ok(())
 }
 
 fn main() {
@@ -76,4 +90,8 @@ fn main() {
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+
+    if let Err(e) = stop_backend() {
+        eprintln!("Error stopping backend: {}", e);
+    }
 }

@@ -22,7 +22,7 @@ import nl.thomasgoossen.gooselib.shared.messages.SetExecPathReq;
 
 public class GLClient {
     private static final int PORT = 7123;
-    private static final int TIMEOUT = 2000;
+    private static final int TIMEOUT = 5000;
 
     private static AppMetaData[] metaData = null;
     private static volatile boolean metaSignal = false;

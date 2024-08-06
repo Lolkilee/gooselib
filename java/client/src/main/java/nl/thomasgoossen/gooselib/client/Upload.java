@@ -59,6 +59,8 @@ public class Upload {
                 GzipCompressorOutputStream gzos = new GzipCompressorOutputStream(bos);
                 TarArchiveOutputStream taos = new TarArchiveOutputStream(gzos)) {
 
+            taos.setLongFileMode(TarArchiveOutputStream.LONGFILE_GNU);
+            taos.setBigNumberMode(TarArchiveOutputStream.BIGNUMBER_POSIX);
             Files.walk(sourcePath)
                     .filter(path -> !Files.isDirectory(path))
                     .forEach(path -> {

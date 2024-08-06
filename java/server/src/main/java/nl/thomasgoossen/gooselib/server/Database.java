@@ -277,6 +277,7 @@ public class Database {
                 return appMap.get(name).getChunk(index);
             } catch (IOException e) {
                 Logger.err("error retrieving chunk; " + e.getMessage());
+                Logger.err("input data; app name: " + name + " | index: " + index);
             }
         }
         return null;
