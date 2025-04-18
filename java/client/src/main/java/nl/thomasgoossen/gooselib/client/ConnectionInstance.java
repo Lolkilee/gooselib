@@ -63,7 +63,7 @@ public class ConnectionInstance {
 
     public ConnectionInstance(String ip, HandshakeResp resp) throws IOException {
         key = resp.getSessionKey();
-        client = new Client(Constants.BUF_PER_CHUNK * Constants.DEF_CHUNK_WINDOW, Constants.BUF_PER_CHUNK);
+        client = new Client(Constants.BUF_PER_CHUNK * Constants.DEF_CHUNK_WINDOW * 2, Constants.BUF_PER_CHUNK);
         KryoHelper.addRegisters(client.getKryo());
         client.start();
         client.connect(5000, ip, resp.getTCP(), resp.getUDP());
