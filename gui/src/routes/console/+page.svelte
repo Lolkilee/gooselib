@@ -54,6 +54,10 @@
     });
 
     javaLineStore.subscribe((val) => {
+        const newLines = val.slice(output.length - javaLog.length);
+        if (newLines.length > 0) {
+            newLines.forEach((line) => addLine(line));
+        }
         javaLog = val;
     });
 

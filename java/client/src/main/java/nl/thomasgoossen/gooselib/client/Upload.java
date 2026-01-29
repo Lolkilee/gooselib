@@ -9,10 +9,12 @@ import java.io.RandomAccessFile;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.zip.Deflater;
 
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorOutputStream;
+import org.apache.commons.compress.compressors.gzip.GzipParameters;
 
 import com.esotericsoftware.kryonet.Connection;
 
@@ -33,8 +35,13 @@ public class Upload {
     private static int curChunk = -1;
     private static FileInputStream fis;
 
+    private static long beginTime = -1;
+    private static long bytesSent = 0;
+
     public static void upload(String password, String folder, String name, String version) {
         curUploadName = name;
+        bytesSent = 0;
+        beginTime = System.currentTimeMillis();
         System.out.println("compressing...");
         compress(folder, UPLOAD_FILE);
         if (!Files.exists(Paths.get(UPLOAD_FILE))) {
@@ -54,28 +61,44 @@ public class Upload {
     private static void compress(String src, String out) {
         status = "compressing";
         Path sourcePath = Paths.get(src);
+
+        GzipParameters gzipParams = new GzipParameters();
+        gzipParams.setCompressionLevel(Deflater.BEST_SPEED); // HUGE speedup
+
+        byte[] buffer = new byte[256 * 1024]; // 256 KB buffer
+
         try (FileOutputStream fos = new FileOutputStream(out);
-                BufferedOutputStream bos = new BufferedOutputStream(fos);
-                GzipCompressorOutputStream gzos = new GzipCompressorOutputStream(bos);
-                TarArchiveOutputStream taos = new TarArchiveOutputStream(gzos)) {
+            BufferedOutputStream bos = new BufferedOutputStream(fos, 256 * 1024);
+            GzipCompressorOutputStream gzos = new GzipCompressorOutputStream(bos, gzipParams);
+            TarArchiveOutputStream taos = new TarArchiveOutputStream(gzos)) {
 
             taos.setLongFileMode(TarArchiveOutputStream.LONGFILE_GNU);
             taos.setBigNumberMode(TarArchiveOutputStream.BIGNUMBER_POSIX);
+
             Files.walk(sourcePath)
-                    .filter(path -> !Files.isDirectory(path))
-                    .forEach(path -> {
-                        TarArchiveEntry entry = new TarArchiveEntry(path.toFile(),
-                                sourcePath.relativize(path).toString());
-                        try {
-                            taos.putArchiveEntry(entry);
-                            Files.copy(path, taos);
-                            taos.closeArchiveEntry();
-                        } catch (IOException e) {
-                            System.out.println(e.getMessage());
+                .filter(Files::isRegularFile)
+                .forEach(path -> {
+                    TarArchiveEntry entry = new TarArchiveEntry(
+                            path.toFile(),
+                            sourcePath.relativize(path).toString()
+                    );
+
+                    try (FileInputStream fis = new FileInputStream(path.toFile())) {
+                        taos.putArchiveEntry(entry);
+
+                        int read;
+                        while ((read = fis.read(buffer)) != -1) {
+                            taos.write(buffer, 0, read);
                         }
-                    });
+
+                        taos.closeArchiveEntry();
+                    } catch (IOException e) {
+                        System.out.println("compress error: " + e.getMessage());
+                    }
+                });
+
         } catch (IOException e) {
-            System.out.println(e.getMessage());
+            System.out.println("compress failed: " + e.getMessage());
         }
     }
 
@@ -125,6 +148,7 @@ public class Upload {
 
             ChunkUploadResp resp = new ChunkUploadResp(curUploadName, curChunk, actual);
             conn.sendTCP(new EncryptedPacket(resp));
+            bytesSent += bRead;
             curChunk++;
         }
     }
@@ -155,5 +179,24 @@ public class Upload {
 
     public static int getChunkCount() {
         return chunkCount;
+    }
+
+    public static DownloadInfo[] getDownloadInfos() {
+        if (chunkCount <= 0 || curChunk < 0)
+            return new DownloadInfo[0];
+
+        float progress = Math.min(1.0f, (float) curChunk / (float) chunkCount);
+
+        if (progress != 1.0f) {
+            return new DownloadInfo[] {
+                new DownloadInfo(curUploadName, progress, progress, speed())
+            };
+        } else return new DownloadInfo[] {};
+    }
+    
+    public static long speed() {
+        if (beginTime < 0) return 0;
+        long elapsed = System.currentTimeMillis() - beginTime;
+        return elapsed > 0 ? (bytesSent * 1000) / elapsed : 0;
     }
 }
