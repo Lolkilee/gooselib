@@ -1,1 +1,0 @@
-note that the .exe for windows is generated using B2E from the .bat file
