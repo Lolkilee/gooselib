@@ -2,6 +2,7 @@ package nl.thomasgoossen.gooselib.client;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
@@ -191,9 +192,21 @@ public class GLClient {
         });
     }
 
+    private static <T> T[] concatenate(T[] a, T[] b) {
+        int aLen = a.length;
+        int bLen = b.length;
+
+        @SuppressWarnings("unchecked")
+        T[] c = (T[]) Array.newInstance(a.getClass().getComponentType(), aLen + bLen);
+        System.arraycopy(a, 0, c, 0, aLen);
+        System.arraycopy(b, 0, c, aLen, bLen);
+
+        return c;
+    }
+
     private static Javalin downloadProgressHandler(Javalin app) {
         return app.get("/download-progress", ctx -> {
-            ctx.json(Download.getDownloadInfos());
+            ctx.json(concatenate(Download.getDownloadInfos(), Upload.getDownloadInfos()));
         });
     }
 

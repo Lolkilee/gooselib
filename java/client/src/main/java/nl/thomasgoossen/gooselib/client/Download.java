@@ -12,6 +12,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -26,8 +27,10 @@ import nl.thomasgoossen.gooselib.shared.messages.ChunkReq;
 public class Download {
     private final static String DL_FILE = "./temp.tar.gz";
     private final static int CHUNK_WINDOW = Constants.DEF_CHUNK_WINDOW;
+    private static final long RESEND_TIMEOUT_MS = 1500;
 
     private final static HashMap<String, Download> instances = new HashMap<>();
+    private final ConcurrentHashMap<Integer, Long> requestedAt = new ConcurrentHashMap<>();
     
     private final AppMetaData meta;
     private final int totalChunkCount;
@@ -43,6 +46,10 @@ public class Download {
     private volatile boolean done = false;
     public volatile long bytesRecv = 0;
     public volatile int next = 0;
+
+    private volatile long recentBytes = 0;
+    private volatile long lastSpeedTime = System.currentTimeMillis();
+    private volatile long currentSpeed = 0; // bytes per second
 
     public Download(AppMetaData meta, String folder) throws FileNotFoundException {
         this.meta = meta;
@@ -89,11 +96,39 @@ public class Download {
             for (int i = 0; i < CHUNK_WINDOW; i++) {
                 ChunkReq req = new ChunkReq(appName, next);
                 GLClient.sendPlainPacketTCP(req);
+                requestedAt.put(next, System.currentTimeMillis());
                 next++;
             }
         }
 
         beginTime = System.currentTimeMillis();
+
+        // Resend timed-out chunks
+        scheduler.scheduleAtFixedRate(() -> {
+            long now = System.currentTimeMillis();
+            for (var entry : requestedAt.entrySet()) {
+                int chunkIndex = entry.getKey();
+                long lastReq = entry.getValue();
+
+                if (now - lastReq > RESEND_TIMEOUT_MS) {
+                    ChunkReq req = new ChunkReq(appName, chunkIndex);
+                    GLClient.sendPacketTCP(req);
+                    requestedAt.put(chunkIndex, now);
+                }
+            }
+
+            d.fillWindow();
+        }, 500, 500, java.util.concurrent.TimeUnit.MILLISECONDS);
+
+        scheduler.scheduleAtFixedRate(() -> {
+            long now = System.currentTimeMillis();
+            long deltaTime = now - lastSpeedTime; // in ms
+            currentSpeed = (recentBytes * 1000) / deltaTime; // bytes/sec
+            recentBytes = 0; // reset for next interval
+            lastSpeedTime = now;
+        }, 500, 500, java.util.concurrent.TimeUnit.MILLISECONDS);
+
+        fillWindow();
     }
 
     private void decompress(String src, String dest) {
@@ -151,8 +186,7 @@ public class Download {
     
     // in bytes/second
     public long speed() {
-        long elapsed = System.currentTimeMillis() - beginTime;
-        return (bytesRecv / elapsed) * 1000;
+        return currentSpeed;
     }
 
     public boolean getDone() {
@@ -174,12 +208,17 @@ public class Download {
             Download d = instances.get(name);
             d.addChunk(index, bytes);
             d.bytesRecv += bytes.length;
+            d.recentBytes += bytes.length;
+            d.requestedAt.remove(index);
 
             if (d.next < d.totalChunkCount) {
                 ChunkReq req = new ChunkReq(d.appName, d.next);
                 GLClient.sendPacketTCP(req);
+                d.requestedAt.put(d.next, System.currentTimeMillis());
                 d.next++;
             }
+
+            d.fillWindow();
         }
     }
 
@@ -216,6 +255,19 @@ public class Download {
             File f = new File(d.path);
             f.delete();
             d.scheduler.shutdown();
+        }
+    }
+
+    private void fillWindow() {
+        int adaptiveWindow = CHUNK_WINDOW;
+        long speedMbps = currentSpeed * 8 / (1024*1024); // rough Mbps
+        if (speedMbps > 10) adaptiveWindow *= 2; // increase window for fast networks
+
+        while (next < totalChunkCount && requestedAt.size() < adaptiveWindow) {
+            ChunkReq req = new ChunkReq(appName, next);
+            GLClient.sendPacketTCP(req);
+            requestedAt.put(next, System.currentTimeMillis());
+            next++;
         }
     }
 }
